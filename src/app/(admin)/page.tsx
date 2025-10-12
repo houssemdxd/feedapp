@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { FeedbackMetrics } from "@/components/ecommerce/EcommerceMetrics";
+import { FeedbackMetrics } from "@/components/ecommerce/FeedbackMetrics";
 import React from "react";
-import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
+import MonthlyTarget from "@/components/ecommerce/FeedbackProgress";
+import MonthlySalesChart from "@/components/ecommerce/MonthlyFeedbacksChart";
 import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import RecentOrders from "@/components/ecommerce/RecentOrders";
+import RecentOrders from "@/components/ecommerce/RecentFeedbacks";
 import DemographicCard from "@/components/ecommerce/DemographicCard";
 import TopProducts from "@/components/ecommerce/TopProducts";
 import TopActiveCustomers from "@/components/ecommerce/TopActiveCustomers";

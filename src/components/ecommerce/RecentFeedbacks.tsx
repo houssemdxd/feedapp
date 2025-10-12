@@ -60,6 +60,14 @@ const feedbackData: Feedback[] = [
     product: "Galaxy S23",
     rating: 3,
   },
+   {
+    id: 6,
+    customerName: "nizar bouden",
+    customerEmail: "nizar.bouden@example.com",
+    customerAvatar: "/images/user/user-06.jpg",
+    product: "Galaxy S23 Ultra",
+    rating: 5,
+  },
 ];
 
 export default function RecentFeedbacks() {
