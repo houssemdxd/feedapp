@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
+import LoginAlerts from "./LoginAlerts";
 
 export default function SignInForm() {
+  const [note, setNote] = useState<string | null>(null);
+
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [formData, setFormData] = useState({
@@ -19,7 +22,14 @@ export default function SignInForm() {
   });
   const [error, setError] = useState("");
   const router = useRouter();
-
+  const sp = useSearchParams();
+  const nextUrl = sp.get("next") || "/";
+  const signupOk = sp.get("signup") === "success";
+  useEffect(() => {
+    if (signupOk) {
+      setNote("Account created. Please sign in.");
+    }
+  }, [signupOk]);
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -52,6 +62,7 @@ export default function SignInForm() {
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
+      
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/"
@@ -144,7 +155,16 @@ export default function SignInForm() {
             </Link>
           </p>
         </div>
+
+        
       </div>
+      {signupOk && (
+        <LoginAlerts />
+      )}
     </div>
   );
 }
+// function setNote(arg0: string) {
+//   throw new Error("Function not implemented.");
+// }
+

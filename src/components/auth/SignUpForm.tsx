@@ -2,18 +2,28 @@
 import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { ChevronDownIcon, ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import type { UserRole } from "@/models/User";
 import Link from "next/link";
 import React, { useState } from "react";
+import Select from "../form/Select";
+import { useRouter } from "next/navigation";
 
 interface FormData {
   fname: string;
   lname: string;
   email: string;
   password: string;
-}
+  role: UserRole;
 
+}
+const roleOptions = [
+  { value: "client", label: "Client" },
+  { value: "organization", label: "Organization" },
+];
 export default function SignUpForm() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -21,12 +31,22 @@ export default function SignUpForm() {
     lname: "",
     email: "",
     password: "",
+    role: "client",
+
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleRoleChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, role: value as UserRole }));
+  };
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "role" ? (value as UserRole) : value,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -52,8 +72,10 @@ export default function SignUpForm() {
       if (!res.ok) throw new Error(data.error || "Something went wrong");
 
       alert("User created successfully! You can now log in.");
-      setFormData({ fname: "", lname: "", email: "", password: "" });
+      setFormData({ fname: "", lname: "", email: "", password: "", role: "client" });
       setIsChecked(false);
+      router.replace("/signin?signup=success");
+
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError(String(err));
@@ -146,6 +168,20 @@ export default function SignUpForm() {
                   ) : (
                     <EyeCloseIcon className="fill-gray-500 dark:fill-gray-400" />
                   )}
+                </span>
+              </div>
+            </div>
+            <div>
+              <Label>Role *</Label>
+              <div className="relative">
+                <Select
+                  options={roleOptions}
+                  placeholder="Choose a role"
+                  onChange={handleRoleChange}
+                  className="dark:bg-dark-900"
+                />
+                <span className="absolute text-gray-500 -translate-y-1/2 pointer-events-none right-3 top-1/2 dark:text-gray-400">
+                  <ChevronDownIcon />
                 </span>
               </div>
             </div>
