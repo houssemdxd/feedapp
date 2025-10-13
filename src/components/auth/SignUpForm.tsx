@@ -202,6 +202,16 @@ export default function SignUpForm() {
             >
               {loading ? "Signing up..." : "Sign Up"}
             </button>
+            
+            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              Already have an account?{' '}
+              <Link 
+                href="/signin" 
+                className="font-medium text-brand-500 hover:text-brand-600 hover:underline"
+              >
+                Sign In
+              </Link>
+            </p>
           </form>
         </div>
       </div>
