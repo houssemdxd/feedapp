@@ -74,10 +74,10 @@ export default function SondageCanvas({ components, setComponents }: any) {
             <label className="font-medium dark:text-white/90">{c.label}</label>
 
             {c.type === "input" && (
-              <input className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Answer here..." />
+              <input className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Answer here..." />
             )}
             {c.type === "textarea" && (
-              <textarea className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Your message..." />
+              <textarea className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Your message..." />
             )}
             {c.type === "rating" && (
               <div className="mt-2 flex gap-1">{[1, 2, 3, 4, 5].map((r) => <span key={r}>⭐</span>)}</div>

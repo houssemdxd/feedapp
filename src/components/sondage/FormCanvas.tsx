@@ -102,9 +102,9 @@ export default function FormCanvas({ components, setComponents }: any) {
           />
         );
       case "input":
-        return <input className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Answer here..." />;
+        return <input className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Answer here..." />;
       case "textarea":
-        return <textarea className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Your message..." />;
+        return <textarea className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Your message..." />;
       case "rating":
         return (
           <div className="mt-2 flex gap-1">{[1, 2, 3, 4, 5].map((r) => <span key={r}>⭐</span>)}</div>
@@ -120,7 +120,7 @@ export default function FormCanvas({ components, setComponents }: any) {
                   type="text"
                   value={opt}
                   onChange={(e) => handleOptionChange(c.id, i, e.target.value)}
-                  className="border rounded px-2 py-1 w-28 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white"
+                  className="border rounded px-2 py-1 w-28 dark:bg-white dark:border-gray-300 dark:text-gray-900"
                 />
                 <button onClick={() => removeOption(c.id, i)} className="text-red-500 font-bold ml-1">×</button>
               </div>
@@ -129,7 +129,7 @@ export default function FormCanvas({ components, setComponents }: any) {
           </div>
         );
       case "text":
-        return <input type="text" placeholder="Enter text here..." className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" />;
+        return <input type="text" placeholder="Enter text here..." className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" />;
       case "image":
         return (
           <div className="mt-2">
@@ -161,11 +161,11 @@ export default function FormCanvas({ components, setComponents }: any) {
           </label>
         );
       case "time":
-        return <input type="time" className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" />;
+        return <input type="time" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" />;
       case "email":
-        return <input type="email" className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Email" />;
+        return <input type="email" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Email" />;
       case "number":
-        return <input type="number" className="border p-2 w-full mt-2 dark:bg-white/[0.06] dark:border-gray-700 dark:text-white" placeholder="Number" />;
+        return <input type="number" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Number" />;
       default:
         return null;
     }

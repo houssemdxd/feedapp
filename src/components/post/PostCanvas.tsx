@@ -48,7 +48,7 @@ export default function PostCanvas({ activeTemplate, bgColor }: any) {
             type="text"
             value={postData.title}
             onChange={(e) => handleInputChange("title", e.target.value)}
-            className="border p-2 w-full mb-3 rounded dark:bg-white/[0.06] dark:border-gray-700 dark:text-white"
+            className="border p-2 w-full mb-3 rounded dark:bg-white dark:border-gray-300 dark:text-gray-900"
             placeholder="Enter title..."
           />
         )}
@@ -72,7 +72,7 @@ export default function PostCanvas({ activeTemplate, bgColor }: any) {
           <textarea
             value={postData.description}
             onChange={(e) => handleInputChange("description", e.target.value)}
-            className="border p-2 w-full mb-3 rounded dark:bg-white/[0.06] dark:border-gray-700 dark:text-white"
+            className="border p-2 w-full mb-3 rounded dark:bg-white dark:border-gray-300 dark:text-gray-900"
             placeholder="Enter description..."
           />
         )}
@@ -82,7 +82,7 @@ export default function PostCanvas({ activeTemplate, bgColor }: any) {
           <textarea
             value={postData.text}
             onChange={(e) => handleInputChange("text", e.target.value)}
-            className="border p-2 w-full mb-3 rounded dark:bg-white/[0.06] dark:border-gray-700 dark:text-white"
+            className="border p-2 w-full mb-3 rounded dark:bg-white dark:border-gray-300 dark:text-gray-900"
             placeholder="Write your post..."
           />
         )}
