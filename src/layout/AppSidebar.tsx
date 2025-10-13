@@ -8,6 +8,7 @@ import {
   BoxCubeIcon,
   CalenderIcon,
   ChevronDownIcon,
+  EyeIcon,
   GridIcon,
   HorizontaLDots,
   ListIcon,
@@ -27,24 +28,22 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  // {
-  //   icon: <GridIcon />,
-  //   name: "Dashboard",
-  //   subItems: [{ name: "Ecommerce", path: "/", pro: false }],
-  // },
   {
     icon: <GridIcon />,
     name: "Dashboard",
-    path: "/admin",
+    subItems: [
+      { name: "Our Insights", path: "/admin", pro: true },
+      { name: "Forms Dashboard", path: "/formsDashboard", pro: false }
+    ],
   },
-  {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/admin/calendar",
-  },
+  // {
+  //   icon: <CalenderIcon />,
+  //   name: "Calendar",
+  //   path: "/admin/calendar",
+  // },
   {
     icon: <UserCircleIcon />,
-    name: "User Profile",
+    name: "Organisation Profile",
     path: "/admin/profile",
   },
   {
@@ -57,34 +56,53 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    name: "Forms",
     icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/admin/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/admin/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
+    name: "Client Side Preferences", 
     subItems: [
-      { name: "Blank Page", path: "/admin/blank", pro: false },
-      // { name: "404 Error", path: "/error-404", pro: false },
+      { name: "User Preferences", path: "/admin/preference", pro: false },
+      { name: "User Preview", path: "/admin/preview", pro: true },
     ],
   },
+  // {
+  //   icon: <EyeIcon />,
+  //   name: "User Preview",
+  //   path: "/admin/preview",
+  // },
+  // {
+  //   icon: <EyeIcon />,
+  //   name: "User Preferences",
+  //   path: "/admin/preferences",
+  // },
+  
+  // {
+  //   name: "Forms",
+  //   icon: <ListIcon />,
+  //   subItems: [{ name: "Form Elements", path: "/admin/form-elements", pro: false }],
+  // },
+  // {
+  //   name: "Tables",
+  //   icon: <TableIcon />,
+  //   subItems: [{ name: "Basic Tables", path: "/admin/basic-tables", pro: false }],
+  // },
+  // {
+  //   name: "Pages",
+  //   icon: <PageIcon />,
+  //   subItems: [
+  //     { name: "Blank Page", path: "/admin/blank", pro: false },
+  //     // { name: "404 Error", path: "/error-404", pro: false },
+  //   ],
+  // },
 ];
 
 const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/admin/line-chart", pro: false },
-      { name: "Bar Chart", path: "/admin/bar-chart", pro: false },
-    ],
-  },
+  // {
+  //   icon: <PieChartIcon />,
+  //   name: "Charts",
+  //   subItems: [
+  //     { name: "Line Chart", path: "/admin/line-chart", pro: false },
+  //     { name: "Bar Chart", path: "/admin/bar-chart", pro: false },
+  //   ],
+  // },
   {
     icon: <BoxCubeIcon />,
     name: "UI Elements",
@@ -96,15 +114,15 @@ const othersItems: NavItem[] = [
       { name: "Images", path: "/admin/images", pro: false },
       { name: "Videos", path: "/admin/videos", pro: false },
     ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
-  },
+   },
+  // {
+  //   icon: <PlugInIcon />,
+  //   name: "Authentication",
+  //   subItems: [
+  //     { name: "Sign In", path: "/signin", pro: false },
+  //     { name: "Sign Up", path: "/signup", pro: false },
+  //   ],
+  // },
 ];
 
 const AppSidebar: React.FC = () => {

@@ -23,7 +23,6 @@ export default function SignInForm() {
   const [error, setError] = useState("");
   const router = useRouter();
   const sp = useSearchParams();
-  const nextUrl = sp.get("next") || "/";
   const signupOk = sp.get("signup") === "success";
   useEffect(() => {
     if (signupOk) {
