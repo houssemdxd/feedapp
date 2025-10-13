@@ -21,8 +21,13 @@ export default function BuilderPage() {
   const [formComponents, setFormComponents] = useState<any[]>([]);
   const [sondageComponents, setSondageComponents] = useState<any[]>([]);
 
-  // For Post tab: only one template can be active at a time
-  const [activePostTemplate, setActivePostTemplate] = useState<any>(null);
+  // For Post tab: options-based instead of template selection
+  const [postOptions, setPostOptions] = useState({
+    addPhoto: true,
+    enableComments: false,
+    enableBinaryReacts: false,
+    enableNormalReacts: true,
+  });
 
   return (
     <div>
@@ -37,13 +42,14 @@ export default function BuilderPage() {
             <PaletteForm onAdd={(elements:any[]) => setFormComponents((prev) => [...prev, ...elements])} />
           )}
           {activeTab === "sondage" && (
-            <PaletteSondage onAdd={(elements:any[]) => setSondageComponents((prev) => [...prev, ...elements])} />
+            <PaletteSondage onAdd={(elements:any[]) => setSondageComponents(elements)} />
           )}
           {activeTab === "post" && (
             <PalettePost
-              activeTemplate={activePostTemplate}
-              onSelectTemplate={setActivePostTemplate}
-              onChangeBackground={setPostBgColor} // ✅ Pass function to change background
+              options={postOptions}
+              onChangeOptions={setPostOptions}
+              onChangeBackground={setPostBgColor}
+              selectedColor={postBgColor}
             />
           )}
         </div>
@@ -58,11 +64,7 @@ export default function BuilderPage() {
               <SondageCanvas components={sondageComponents} setComponents={setSondageComponents} />
             )}
             {activeTab === "post" && (
-              <PostCanvas
-                activeTemplate={activePostTemplate}
-                setActiveTemplate={setActivePostTemplate}
-                bgColor={postBgColor} // ✅ correct prop name
-              />
+              <PostCanvas options={postOptions} bgColor={postBgColor} />
             )}
 
             {/* 🔹 Submit Button */}
@@ -79,9 +81,7 @@ export default function BuilderPage() {
                       dataToShow = sondageComponents;
                       break;
                     case "post":
-                      dataToShow = activePostTemplate
-                        ? { type: "post", content: activePostTemplate.structure, bgColor: postBgColor }
-                        : null;
+                      dataToShow = { type: "post", options: postOptions, bgColor: postBgColor };
                       break;
                     default:
                       dataToShow = null;

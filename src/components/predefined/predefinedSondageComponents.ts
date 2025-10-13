@@ -1,6 +1,6 @@
 export const predefinedSondageComponents = [
   {
-    name: "Yes/No Question",
+    name: "Yes/No Survey ",
     elements: [
       {
         type: "text",
@@ -14,7 +14,7 @@ export const predefinedSondageComponents = [
     ],
   },
   {
-    name: "Rating Question",
+    name: "Rating Survey ",
     elements: [
       {
         type: "text",
@@ -28,7 +28,7 @@ export const predefinedSondageComponents = [
     ],
   },
   {
-    name: "Multiple Choice Question",
+    name: "Multiple Choice Survey ",
     elements: [
       {
         type: "text",

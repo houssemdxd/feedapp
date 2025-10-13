@@ -2,76 +2,58 @@
 "use client";
 
 import React, { useState } from "react";
-import { v4 as uuidv4 } from "uuid";
+import Radio from "../form/input/Radio";
+import Checkbox from "../form/input/Checkbox";
 
 export default function SondageCanvas({ components, setComponents }: any) {
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  // Track selected values for radio buttons and checkboxes
+  const [selectedValues, setSelectedValues] = useState<{ [key: string]: string }>({});
+  const [checkedValues, setCheckedValues] = useState<{ [key: string]: string[] }>({});
 
-  // Ensure unique IDs for arrays
-  const ensureUniqueIds = (items: any[]): any[] =>
-    items.map((item) => ({ ...item, id: uuidv4() }));
+  const handleRadioChange = (componentId: string, value: string) => {
+    setSelectedValues(prev => ({ ...prev, [componentId]: value }));
+  };
 
-  const handleDrop = (e: any, dropIndex?: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const data = e.dataTransfer.getData("component");
-    if (!data) return;
-
-    const parsed = JSON.parse(data);
-    let newElements: any[] = [];
-
-    if (parsed.type === "predefined" && Array.isArray(parsed.elements)) {
-      // multiple predefined elements
-      newElements = ensureUniqueIds(parsed.elements);
-    } else {
-      // single component
-      let extraFields = {};
-      if (parsed.type === "checkbox" || parsed.type === "radio") {
-        extraFields = { options: ["Option 1", "Option 2", "Option 3"] };
+  const handleCheckboxChange = (componentId: string, optionValue: string, checked: boolean) => {
+    setCheckedValues(prev => {
+      const current = prev[componentId] || [];
+      if (checked) {
+        return { ...prev, [componentId]: [...current, optionValue] };
+      } else {
+        return { ...prev, [componentId]: current.filter(v => v !== optionValue) };
       }
-      newElements = [
-        { ...parsed, id: uuidv4(), label: "New Sondage Question", ...extraFields },
-      ];
-    }
-
-    setComponents((prev: any) => {
-      const updated = [...prev];
-      const index = dropIndex ?? prev.length;
-      updated.splice(index, 0, ...newElements);
-      return updated;
     });
+  };
 
-    setDragOverIndex(null);
+  const deleteComponent = (componentId: string) => {
+    setComponents((prev: any[]) => prev.filter((c: any) => c.id !== componentId));
   };
 
   return (
-    <div
-      className="w-full bg-transparent"
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => handleDrop(e)}
-    >
-      <h2 className="text-lg font-semibold mb-3 dark:text-white">Sondage Canvas</h2>
+    <div className="w-full bg-transparent">
+      <h2 className="text-lg font-semibold mb-3 dark:text-white">Surveys Canvas</h2>
 
       {components.length === 0 && (
-        <div className="text-gray-400 text-sm dark:text-white/70">Drag sondage components here...</div>
+        <div className="text-gray-400 text-sm dark:text-white/70">Use the predefined list to add questions.</div>
       )}
 
       <div className="max-h-[70vh] overflow-y-auto pr-1">
         {components.map((c: any, index: number) => (
           <div
             key={c.id}
-            className={`border rounded p-3 mb-3 bg-white shadow-sm relative dark:bg-white/[0.04] dark:border-gray-700 ${
-              dragOverIndex === index ? "border-blue-500" : ""
-            }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOverIndex(index);
-            }}
-            onDragLeave={() => setDragOverIndex(null)}
-            onDrop={(e) => handleDrop(e, index)}
+            className={`border rounded p-3 mb-3 bg-white shadow-sm relative dark:bg-white/[0.04] dark:border-gray-700`}
           >
-            <label className="font-medium dark:text-white/90">{c.label}</label>
+            <button
+              onClick={() => deleteComponent(c.id)}
+              className="absolute top-1 right-1 text-red-500 font-bold"
+              title="Delete question"
+            >
+              ×
+            </button>
+
+            <div className="font-medium mb-2 dark:text-white/90">
+              {c.label}
+            </div>
 
             {c.type === "input" && (
               <input className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Answer here..." />
@@ -82,23 +64,30 @@ export default function SondageCanvas({ components, setComponents }: any) {
             {c.type === "rating" && (
               <div className="mt-2 flex gap-1">{[1, 2, 3, 4, 5].map((r) => <span key={r}>⭐</span>)}</div>
             )}
-            {c.type === "checkbox" && (
-              <div className="mt-2 flex flex-wrap gap-4">
+            {c.type === "radio" && (
+              <div className="mt-2 space-y-2">
                 {c.options?.map((opt: string, i: number) => (
-                  <label key={i} className="flex items-center gap-2">
-                    <input type="checkbox" />
-                    <span className="dark:text-white/80">{opt}</span>
-                  </label>
+                  <Radio
+                    key={`${c.id}-opt-${i}`}
+                    id={`${c.id}-opt-${i}`}
+                    name={`radio-group-${c.id}`}
+                    value={opt}
+                    checked={selectedValues[c.id] === opt}
+                    onChange={(value) => handleRadioChange(c.id, value)}
+                    label={opt}
+                  />
                 ))}
               </div>
             )}
-            {c.type === "radio" && (
-              <div className="mt-2 flex flex-col gap-2">
+            {c.type === "checkbox" && (
+              <div className="mt-2 space-y-2">
                 {c.options?.map((opt: string, i: number) => (
-                  <label key={i} className="flex items-center gap-2">
-                    <input type="radio" name={`radio-${c.id}`} />
-                    <span className="dark:text-white/80">{opt}</span>
-                  </label>
+                  <Checkbox
+                    key={`${c.id}-opt-${i}`}
+                    label={opt}
+                    checked={checkedValues[c.id]?.includes(opt) || false}
+                    onChange={(checked) => handleCheckboxChange(c.id, opt, checked)}
+                  />
                 ))}
               </div>
             )}

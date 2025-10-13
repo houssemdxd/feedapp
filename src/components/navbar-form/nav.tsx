@@ -27,7 +27,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
         }`}
         onClick={() => setActiveTab("sondage")}
       >
-        Sondage
+        Surveys
       </button>
       <button
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${

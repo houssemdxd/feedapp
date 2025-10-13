@@ -1,52 +1,53 @@
 import React from "react";
-import { AiOutlineFileText, AiOutlinePicture, AiOutlineLike } from "react-icons/ai";
 import { FaCheck } from "react-icons/fa";
+import Checkbox from "../form/input/Checkbox";
 
-const postTemplates = [
-  { 
-    id: 1, 
-    name: "Title + Image + Description", 
-    structure: { title: "", image: "", description: "", reactions: [] },
-    icon: <AiOutlinePicture className="text-3xl text-gray-600 dark:text-white/70" />
-  },
-  { 
-    id: 2, 
-    name: "Like/Dislike", 
-    structure: { title: "", image: "", description: "", reactions: ["👍","👎"] },
-    icon: <AiOutlineLike className="text-3xl text-gray-600 dark:text-white/70" />
-  },
-  { 
-    id: 3, 
-    name: "Text + Reactions", 
-    structure: { text: "", reactions: [] },
-    icon: <AiOutlineFileText className="text-3xl text-gray-600 dark:text-white/70" />
-  },
-];
+// Old template-based UI commented out as requested
+// import { AiOutlineFileText, AiOutlinePicture, AiOutlineLike } from "react-icons/ai";
+// const postTemplates = [ ... ];
 
 const backgroundColors = ["white", "lightblue", "lightyellow", "lightgreen", "lightpink"];
 
-export default function PalettePost({ activeTemplate, onSelectTemplate, onChangeBackground, selectedColor }: any) {
+export default function PalettePost({ options, onChangeOptions, onChangeBackground, selectedColor }: any) {
+  const toggle = (key: string) => {
+    const next = { ...options, [key]: !options[key] } as any;
+    // enforce mutual exclusivity between reacts
+    if (key === "enableBinaryReacts" && next.enableBinaryReacts) {
+      next.enableNormalReacts = false;
+    }
+    if (key === "enableNormalReacts" && next.enableNormalReacts) {
+      next.enableBinaryReacts = false;
+    }
+    onChangeOptions(next);
+  };
+
   return (
     <div className="p-2 bg-transparent flex flex-col h-full max-h-[70vh] overflow-y-auto">
-      <h2 className="text-lg font-semibold mb-3 dark:text-white">Post Templates</h2>
+      <h2 className="text-lg font-semibold mb-3 dark:text-white">Post Options</h2>
 
-      {/* Template buttons */}
-      {postTemplates.map((tpl) => (
-        <button
-          key={tpl.id}
-          onClick={() => onSelectTemplate(tpl)}
-          className={`p-2 rounded-lg border mb-3 w-full flex flex-col items-center transition-all
-            ${activeTemplate?.id === tpl.id
-              ? "bg-blue-100 border-blue-500 dark:bg-white/[0.12] dark:border-white/20"
-              : "hover:bg-gray-50 dark:hover:bg-white/[0.08] dark:border-gray-700"}
-          `}
-        >
-          <div className="w-12 h-12 flex items-center justify-center mb-2">
-            {tpl.icon}
-          </div>
-          <span className="text-sm font-medium text-center dark:text-white/90">{tpl.name}</span>
-        </button>
-      ))}
+      {/* Toggle controls */}
+      <div className="flex flex-col gap-2">
+        <Checkbox
+          label="Add photo"
+          checked={!!options.addPhoto}
+          onChange={() => toggle("addPhoto")}
+        />
+        <Checkbox
+          label="Enable comments"
+          checked={!!options.enableComments}
+          onChange={() => toggle("enableComments")}
+        />
+        <Checkbox
+          label="Enable binary reacts (👍/👎)"
+          checked={!!options.enableBinaryReacts}
+          onChange={() => toggle("enableBinaryReacts")}
+        />
+        <Checkbox
+          label="Enable normal reacts (emoji)"
+          checked={!!options.enableNormalReacts}
+          onChange={() => toggle("enableNormalReacts")}
+        />
+      </div>
 
       {/* Background color selector */}
       <div className="mt-6">
