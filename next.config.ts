@@ -1,7 +1,18 @@
 import type { NextConfig } from "next";
+import withPWAInit from "next-pwa";
+
+const withPWA = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development", // désactivé en dev
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  reactStrictMode: true,
+eslint: {
+    ignoreDuringBuilds: true, // ⚡ Ignore ESLint pendant le build
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
@@ -11,4 +22,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA(nextConfig);

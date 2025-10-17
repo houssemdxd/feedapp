@@ -1,10 +1,10 @@
-import SignInForm from "@/components/auth/SignInForm";
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Next.js SignIn Page | TailAdmin - Next.js Dashboard Template",
-  description: "This is Next.js Signin Page TailAdmin Dashboard Template",
-};
+import dynamic from "next/dynamic";
+
+const SignInForm = dynamic(() => import("@/components/auth/SignInForm"), {
+  ssr: false, // désactive le rendu côté serveur
+});
 
 export default function SignIn() {
   return <SignInForm />;
