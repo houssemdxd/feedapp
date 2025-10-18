@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Preferences {
   logo: string | null;
@@ -29,6 +29,7 @@ export default function AdminPreviewPage() {
   const [elementRef, setElementRef] = useState<HTMLElement | null>(null);
 
   const [tempColor, setTempColor] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleElementClick = (element: string, event: React.MouseEvent) => {
     const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -80,12 +81,24 @@ export default function AdminPreviewPage() {
   };
 
   const templates = [
+    { backgroundColor: '#ffffff', backgroundImage: null },
     { backgroundColor: '#f3f4f6', backgroundImage: '/images/preview-template/back01.jpg' },
     { backgroundColor: '#fef3c7', backgroundImage: '/images/preview-template/back02.jpg' },
     { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back03.jpg' },
     { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back04.jpg' },
     { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back05.jpg' },
-    { backgroundColor: '#ffffff', backgroundImage: null },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back06.png' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back07.jpg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back08.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back09.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back10.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back11.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back12.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back13.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back14.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back15.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back16.jpeg' },
+    { backgroundColor: '#dbeafe', backgroundImage: '/images/preview-template/back17.jpg' },
   ];
 
   const applyTemplate = (index: number) => {
@@ -153,6 +166,10 @@ export default function AdminPreviewPage() {
     setSelectedElement(null);
   };
 
+  const handleChooseImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
   // TODO: Fetch preferences from API or database
   useEffect(() => {
     // Example: Fetch from /api/preferences
@@ -167,6 +184,18 @@ export default function AdminPreviewPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:space-x-6 space-y-6">
+        {/* Top Bar */}
+
+
+        {/* Hidden file input for background image */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleBackgroundImageChange}
+          className="hidden"
+        />
+
         {/* Preview */}
         <div className="w-full md:w-2/3 flex justify-center">
           {/* iPhone Frame */}
@@ -240,24 +269,52 @@ export default function AdminPreviewPage() {
             <div className="absolute -right-1 top-28 w-1 h-8 bg-gray-600 rounded-r"></div>
           </div>
         </div>
-        {/* Controls */}
-        <div className="w-full md:w-1/3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Customize Preview</h2>
-          {/* Background Image */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Background Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleBackgroundImageChange}
-              className="block w-full text-sm text-gray-900 dark:text-white border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700"
-            />
-            {backgroundImage && (
-              <img src={backgroundImage} alt="Selected Background" className="mt-2 w-16 h-16 object-cover rounded" />
-            )}
+
+        {/* Template Carousel - Mobile Only */}
+        <div className="md:hidden w-full">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white text-center">Choose Template</h3>
+          <div className="flex space-x-3 overflow-x-auto pb-4 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {templates.map((template, index) => (
+              <div
+                key={index}
+                onClick={() => applyTemplate(index)}
+                className={`flex-shrink-0 w-16 h-24 sm:w-20 sm:h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${selectedTemplate === index ? 'border-blue-500 shadow-lg' : 'border-gray-300'}`}
+                style={{
+                  backgroundColor: template.backgroundColor,
+                  backgroundImage: template.backgroundImage ? `url(${template.backgroundImage})` : 'none',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                {/* Small App Bar */}
+                <div className="h-5 sm:h-6 bg-gray-100 dark:bg-gray-800 rounded-t-xl flex items-center justify-between px-1">
+                  <div className="w-6 sm:w-8 h-1.5 sm:h-2 bg-gray-300 rounded"></div>
+                  <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-gray-300 rounded-full"></div>
+                </div>
+                {/* Small Content */}
+                <div className="h-16 sm:h-18 p-1 flex flex-col justify-between">
+                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
+                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded"></div>
+                </div>
+              </div>
+            ))}
           </div>
-          {/* Template Options */}
-          <div>
+        </div>
+
+        {/* Controls */}
+        <div className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Customize Preview</h2>
+            <button onClick={handleChooseImageClick} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center space-x-1 text-sm">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Choose Image</span>
+            </button>
+          </div>
+          {/* Template Options - Desktop Only */}
+          <div className="hidden md:block">
             <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Template Options</label>
             <div className="flex flex-wrap gap-2">
               {templates.map((template, index) => (
