@@ -29,6 +29,7 @@ export default function AdminPreviewPage() {
   const [elementRef, setElementRef] = useState<HTMLElement | null>(null);
 
   const [tempColor, setTempColor] = useState('');
+  const [liquidGlassEffect, setLiquidGlassEffect] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleElementClick = (element: string, event: React.MouseEvent) => {
@@ -244,13 +245,52 @@ export default function AdminPreviewPage() {
                   <div>
                     <h2 className="text-md font-semibold mb-2 cursor-pointer" style={{ color: formTitleColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formTitle', e); }}>Forms</h2>
                     <ul className="space-y-2">
-                      <li className="p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer" style={{ backgroundColor: formItemBackgroundColor, color: formItemTextColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}>
+                      <li
+                        className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
+                          liquidGlassEffect
+                            ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
+                            : 'shadow'
+                        }`}
+                        style={{
+                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
+                          color: formItemTextColor,
+                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                        }}
+                        onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
+                      >
                         <span onClick={(e) => { e.stopPropagation(); handleElementClick('formItemText', e); }}>Form 1</span>
                       </li>
-                      <li className="p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer" style={{ backgroundColor: formItemBackgroundColor, color: formItemTextColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}>
+                      <li
+                        className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
+                          liquidGlassEffect
+                            ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
+                            : 'shadow'
+                        }`}
+                        style={{
+                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
+                          color: formItemTextColor,
+                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                        }}
+                        onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
+                      >
                         <span onClick={(e) => { e.stopPropagation(); handleElementClick('formItemText', e); }}>Form 2</span>
                       </li>
-                      <li className="p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer" style={{ backgroundColor: formItemBackgroundColor, color: formItemTextColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}>
+                      <li
+                        className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
+                          liquidGlassEffect
+                            ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
+                            : 'shadow'
+                        }`}
+                        style={{
+                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
+                          color: formItemTextColor,
+                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                        }}
+                        onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
+                      >
                         <span onClick={(e) => { e.stopPropagation(); handleElementClick('formItemText', e); }}>Form 3</span>
                       </li>
                     </ul>
@@ -312,6 +352,27 @@ export default function AdminPreviewPage() {
               </svg>
               <span>Choose Image</span>
             </button>
+          </div>
+          {/* Liquid Glass Effect Toggle */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-900 dark:text-white">Liquid Glass Effect</label>
+              <button
+                onClick={() => setLiquidGlassEffect(!liquidGlassEffect)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  liquidGlassEffect ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    liquidGlassEffect ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Apply glassmorphism effect to form elements
+            </p>
           </div>
           {/* Template Options - Desktop Only */}
           <div className="hidden md:block">
