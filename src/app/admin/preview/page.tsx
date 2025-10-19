@@ -1,29 +1,26 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-
-interface Preferences {
-  logo: string | null;
-  name: string;
-  description: string;
-  backgroundColor: string;
-}
+import { Preferences } from '@/lib/preferences';
 
 export default function AdminPreviewPage() {
   const [preferences, setPreferences] = useState<Preferences>({
     logo: '/images/user/owner.jpg',
-    name: 'ESPRIT',
-    description: 'Welcome to ESPRIT, Feel free to give your feedback. Your Opinion Matters!',
+    name: 'Organization Name',
+    description: 'Welcome to Our Organization, Feel free to give your feedback. Your Opinion Matters!',
     backgroundColor: '#f3f4f6',
+    backgroundImage: null,
+    appBarBackgroundColor: '#f9fafb',
+    organizationNameColor: '#1f2937',
+    descriptionColor: '#374151',
+    formItemBackgroundColor: '#ffffff',
+    formItemTextColor: '#1f2937',
+    formTitleColor: '#1f2937',
+    liquidGlassEffect: false,
+    selectedTemplate: 0,
   });
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState(0);
-  const [appBarBackgroundColor, setAppBarBackgroundColor] = useState('#f9fafb');
-  const [organizationNameColor, setOrganizationNameColor] = useState('#1f2937');
-  const [descriptionColor, setDescriptionColor] = useState('#374151');
-  const [formItemBackgroundColor, setFormItemBackgroundColor] = useState('#ffffff');
-  const [formItemTextColor, setFormItemTextColor] = useState('#1f2937');
-  const [formTitleColor, setFormTitleColor] = useState('#1f2937');
   const [palettePosition, setPalettePosition] = useState({ top: 0, left: 0 });
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [elementRef, setElementRef] = useState<HTMLElement | null>(null);
@@ -37,13 +34,13 @@ export default function AdminPreviewPage() {
     setPalettePosition({ top: rect.bottom + window.scrollY, left: rect.left + window.scrollX });
     setSelectedElement(element);
     setTempColor(
-      element === 'appBar' ? appBarBackgroundColor :
+      element === 'appBar' ? preferences.appBarBackgroundColor :
       element === 'background' ? preferences.backgroundColor :
-      element === 'formItem' ? formItemBackgroundColor :
-      element === 'orgName' ? organizationNameColor :
-      element === 'description' ? descriptionColor :
-      element === 'formTitle' ? formTitleColor :
-      formItemTextColor
+      element === 'formItem' ? preferences.formItemBackgroundColor :
+      element === 'orgName' ? preferences.organizationNameColor :
+      element === 'description' ? preferences.descriptionColor :
+      element === 'formTitle' ? preferences.formTitleColor :
+      preferences.formItemTextColor
     );
   };
 
@@ -53,30 +50,26 @@ export default function AdminPreviewPage() {
 
   const applyColorChange = () => {
     if (selectedElement && tempColor) {
-      switch (selectedElement) {
-        case 'appBar':
-          setAppBarBackgroundColor(tempColor);
-          break;
-        case 'background':
-          setPreferences(prev => ({ ...prev, backgroundColor: tempColor }));
-          setSelectedTemplate(-1);
-          break;
-        case 'formItem':
-          setFormItemBackgroundColor(tempColor);
-          break;
-        case 'orgName':
-          setOrganizationNameColor(tempColor);
-          break;
-        case 'description':
-          setDescriptionColor(tempColor);
-          break;
-        case 'formTitle':
-          setFormTitleColor(tempColor);
-          break;
-        case 'formItemText':
-          setFormItemTextColor(tempColor);
-          break;
-      }
+      setPreferences(prev => {
+        switch (selectedElement) {
+          case 'appBar':
+            return { ...prev, appBarBackgroundColor: tempColor };
+          case 'background':
+            return { ...prev, backgroundColor: tempColor };
+          case 'formItem':
+            return { ...prev, formItemBackgroundColor: tempColor };
+          case 'orgName':
+            return { ...prev, organizationNameColor: tempColor };
+          case 'description':
+            return { ...prev, descriptionColor: tempColor };
+          case 'formTitle':
+            return { ...prev, formTitleColor: tempColor };
+          case 'formItemText':
+            return { ...prev, formItemTextColor: tempColor };
+          default:
+            return prev;
+        }
+      });
     }
     setSelectedElement(null);
   };
@@ -104,13 +97,18 @@ export default function AdminPreviewPage() {
 
   const applyTemplate = (index: number) => {
     setSelectedTemplate(index);
-    setPreferences(prev => ({ ...prev, backgroundColor: templates[index].backgroundColor }));
+    setPreferences(prev => ({
+      ...prev,
+      backgroundColor: templates[index].backgroundColor,
+      selectedTemplate: index,
+      backgroundImage: null
+    }));
     setBackgroundImage(templates[index].backgroundImage);
   };
 
   const handleBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const color = e.target.value;
-    setPreferences(prev => ({ ...prev, backgroundColor: color }));
+    setPreferences(prev => ({ ...prev, backgroundColor: color, selectedTemplate: -1 }));
     setSelectedTemplate(-1); // Deselect template when custom color is chosen
   };
 
@@ -119,50 +117,51 @@ export default function AdminPreviewPage() {
     if (file) {
       const url = URL.createObjectURL(file);
       setBackgroundImage(url);
+      setPreferences(prev => ({ ...prev, backgroundImage: url, selectedTemplate: -1 }));
       setSelectedTemplate(-1); // Deselect template when custom image is chosen
     }
   };
 
   const handleAppBarBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAppBarBackgroundColor(e.target.value);
+    setPreferences(prev => ({ ...prev, appBarBackgroundColor: e.target.value }));
   };
 
   const handleOrganizationNameColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setOrganizationNameColor(e.target.value);
+    setPreferences(prev => ({ ...prev, organizationNameColor: e.target.value }));
   };
 
   const handleDescriptionColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDescriptionColor(e.target.value);
+    setPreferences(prev => ({ ...prev, descriptionColor: e.target.value }));
   };
 
   const handleFormItemBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormItemBackgroundColor(e.target.value);
+    setPreferences(prev => ({ ...prev, formItemBackgroundColor: e.target.value }));
   };
 
   const handleFormTitleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormTitleColor(e.target.value);
+    setPreferences(prev => ({ ...prev, formTitleColor: e.target.value }));
   };
 
   const handleFormItemTextColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormItemTextColor(e.target.value);
+    setPreferences(prev => ({ ...prev, formItemTextColor: e.target.value }));
   };
 
   const handleElementColorChange = (color: string) => {
     if (selectedElement) {
-      switch (selectedElement) {
-        case 'orgName':
-          setOrganizationNameColor(color);
-          break;
-        case 'description':
-          setDescriptionColor(color);
-          break;
-        case 'formTitle':
-          setFormTitleColor(color);
-          break;
-        case 'formItemText':
-          setFormItemTextColor(color);
-          break;
-      }
+      setPreferences(prev => {
+        switch (selectedElement) {
+          case 'orgName':
+            return { ...prev, organizationNameColor: color };
+          case 'description':
+            return { ...prev, descriptionColor: color };
+          case 'formTitle':
+            return { ...prev, formTitleColor: color };
+          case 'formItemText':
+            return { ...prev, formItemTextColor: color };
+          default:
+            return prev;
+        }
+      });
     }
     setSelectedElement(null);
   };
@@ -171,15 +170,51 @@ export default function AdminPreviewPage() {
     fileInputRef.current?.click();
   };
 
-  // TODO: Fetch preferences from API or database
+  const handleSavePreferences = async () => {
+    try {
+      const response = await fetch('/api/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...preferences,
+          backgroundImage: backgroundImage,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Preferences saved successfully!');
+      } else {
+        alert('Failed to save preferences');
+      }
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      alert('Error saving preferences');
+    }
+  };
+
+  // Fetch preferences from API or database
   useEffect(() => {
-    // Example: Fetch from /api/preferences
-    // const fetchPreferences = async () => {
-    //   const res = await fetch('/api/preferences');
-    //   const data = await res.json();
-    //   setPreferences(data);
-    // };
-    // fetchPreferences();
+    const fetchPreferences = async () => {
+      try {
+        const response = await fetch('/api/preferences');
+        if (response.ok) {
+          const data = await response.json();
+          setPreferences(data);
+          if (data.backgroundImage) {
+            setBackgroundImage(data.backgroundImage);
+          }
+          if (data.selectedTemplate !== undefined) {
+            setSelectedTemplate(data.selectedTemplate);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching preferences:', error);
+      }
+    };
+
+    fetchPreferences();
   }, []);
 
   return (
@@ -227,8 +262,8 @@ export default function AdminPreviewPage() {
               {/* Content */}
               <div className="h-full flex flex-col">
                 {/* App Bar */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer" style={{ backgroundColor: appBarBackgroundColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('appBar', e); }}>
-                  <h1 className="text-lg font-bold cursor-pointer" style={{ color: organizationNameColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('orgName', e); }}>
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer" style={{ backgroundColor: preferences.appBarBackgroundColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('appBar', e); }}>
+                  <h1 className="text-lg font-bold cursor-pointer" style={{ color: preferences.organizationNameColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('orgName', e); }}>
                     {preferences.name}
                   </h1>
                   {preferences.logo && (
@@ -238,24 +273,24 @@ export default function AdminPreviewPage() {
                 {/* Description and Forms Container */}
                 <div className="flex-grow flex flex-col p-4">
                   {/* Description */}
-                  <p className="text-sm mb-4 cursor-pointer" style={{ color: descriptionColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('description', e); }}>
+                  <p className="text-sm mb-4 cursor-pointer" style={{ color: preferences.descriptionColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('description', e); }}>
                     {preferences.description}
                   </p>
                   {/* List of Forms */}
                   <div>
-                    <h2 className="text-md font-semibold mb-2 cursor-pointer" style={{ color: formTitleColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formTitle', e); }}>Forms</h2>
+                    <h2 className="text-md font-semibold mb-2 cursor-pointer" style={{ color: preferences.formTitleColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('formTitle', e); }}>Forms</h2>
                     <ul className="space-y-2">
                       <li
                         className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
-                          liquidGlassEffect
+                          preferences.liquidGlassEffect
                             ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
                             : 'shadow'
                         }`}
                         style={{
-                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
-                          color: formItemTextColor,
-                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
-                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                          backgroundColor: preferences.liquidGlassEffect ? 'transparent' : preferences.formItemBackgroundColor,
+                          color: preferences.formItemTextColor,
+                          backdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none'
                         }}
                         onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
                       >
@@ -263,15 +298,15 @@ export default function AdminPreviewPage() {
                       </li>
                       <li
                         className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
-                          liquidGlassEffect
+                          preferences.liquidGlassEffect
                             ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
                             : 'shadow'
                         }`}
                         style={{
-                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
-                          color: formItemTextColor,
-                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
-                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                          backgroundColor: preferences.liquidGlassEffect ? 'transparent' : preferences.formItemBackgroundColor,
+                          color: preferences.formItemTextColor,
+                          backdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none'
                         }}
                         onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
                       >
@@ -279,15 +314,15 @@ export default function AdminPreviewPage() {
                       </li>
                       <li
                         className={`p-3 rounded-lg shadow text-gray-900 dark:text-white cursor-pointer transition-all duration-300 ${
-                          liquidGlassEffect
+                          preferences.liquidGlassEffect
                             ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
                             : 'shadow'
                         }`}
                         style={{
-                          backgroundColor: liquidGlassEffect ? 'transparent' : formItemBackgroundColor,
-                          color: formItemTextColor,
-                          backdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none',
-                          WebkitBackdropFilter: liquidGlassEffect ? 'blur(16px)' : 'none'
+                          backgroundColor: preferences.liquidGlassEffect ? 'transparent' : preferences.formItemBackgroundColor,
+                          color: preferences.formItemTextColor,
+                          backdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none',
+                          WebkitBackdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none'
                         }}
                         onClick={(e) => { e.stopPropagation(); handleElementClick('formItem', e); }}
                       >
@@ -346,26 +381,34 @@ export default function AdminPreviewPage() {
         <div className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Customize Preview</h2>
-            <button onClick={handleChooseImageClick} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center space-x-1 text-sm">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span>Choose Image</span>
-            </button>
+            <div className="flex space-x-2">
+              <button onClick={handleChooseImageClick} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md flex items-center space-x-1 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Choose Image</span>
+              </button>
+              <button onClick={handleSavePreferences} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center space-x-1 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Save</span>
+              </button>
+            </div>
           </div>
           {/* Liquid Glass Effect Toggle */}
           <div className="mb-4">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-gray-900 dark:text-white">Liquid Glass Effect</label>
               <button
-                onClick={() => setLiquidGlassEffect(!liquidGlassEffect)}
+                onClick={() => setPreferences(prev => ({ ...prev, liquidGlassEffect: !prev.liquidGlassEffect }))}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                  liquidGlassEffect ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
+                  preferences.liquidGlassEffect ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'
                 }`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    liquidGlassEffect ? 'translate-x-6' : 'translate-x-1'
+                    preferences.liquidGlassEffect ? 'translate-x-6' : 'translate-x-1'
                   }`}
                 />
               </button>
