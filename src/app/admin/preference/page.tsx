@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import { Preferences } from '@/lib/preferences';
-
-export default function AdminPreferencePage() {
   const [preferences, setPreferences] = useState<Preferences>({
     logo: null,
     name: '',
@@ -238,33 +237,51 @@ export default function AdminPreferencePage() {
         {/* Access Code Display */}
         {accessCode && (
           <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">🔑 Access Code</h3>
               <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded-full">
                 Active
               </span>
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="flex-1">
-                <div className="text-2xl font-mono font-bold text-blue-900 dark:text-blue-100 tracking-wider">
-                  {accessCode}
+
+            {/* Access Code and QR Code Row */}
+            <div className="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
+              {/* Text Code Display */}
+              <div className="flex items-center space-x-3 flex-1">
+                <div className="flex-1">
+                  <div className="text-2xl font-mono font-bold text-blue-900 dark:text-blue-100 tracking-wider">
+                    {accessCode}
+                  </div>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Use this code to access your organization
+                  </p>
                 </div>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                  Use this code to access your organization
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(accessCode);
+                    setMessage('Access code copied to clipboard!');
+                  }}
+                  className="flex-shrink-0 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                  title="Copy to clipboard"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* QR Code Display */}
+              <div className="flex flex-col items-center">
+                <div className="bg-white p-3 rounded-lg shadow-sm">
+                  <QRCode
+                    value={accessCode}
+                    size={120}
+                  />
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 text-center">
+                  Scan QR Code
                 </p>
               </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(accessCode);
-                  setMessage('Access code copied to clipboard!');
-                }}
-                className="flex-shrink-0 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
-                title="Copy to clipboard"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </button>
             </div>
           </div>
         )}
