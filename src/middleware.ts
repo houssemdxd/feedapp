@@ -27,7 +27,7 @@ export async function middleware(req: NextRequest) {
 // Protect these URL paths:
 export const config = {
   matcher: [
-    "/(admin)(.*)",      
+    //"/(admin)(.*)",      
     "/dashboard/:path*",
     "/settings/:path*",
     "/profile/:path*",

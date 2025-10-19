@@ -35,8 +35,15 @@ export default function PostBuilderPage() {
               <button
                 className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 onClick={() => {
-                  const dataToShow = { type: "post", options: postOptions, bgColor: postBgColor };
-                  alert(JSON.stringify(dataToShow, null, 2));
+                  // Transform the post into a structured object
+                  const formattedData = {
+                    type: "post",
+                    options: { ...postOptions },
+                    bgColor: postBgColor,
+                  };
+
+                  alert(JSON.stringify(formattedData, null, 2));
+                  console.log("Submitted data:", formattedData);
                 }}
               >
                 Submit

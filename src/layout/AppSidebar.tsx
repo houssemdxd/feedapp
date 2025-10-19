@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
     name: "Dashboard",
     subItems: [
       { name: "Our Insights", path: "/admin", pro: true },
-      { name: "Forms Dashboard", path: "/formsDashboard", pro: false }
+      { name: "Forms Dashboard", path: "/admin/dashboard-admin", pro: false }
     ],
   },
   // {
