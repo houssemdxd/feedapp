@@ -28,20 +28,49 @@ export default function AdminPreviewPage() {
 
   const [tempColor, setTempColor] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch preferences from API or database
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
+        console.log('Fetching preferences...');
         const response = await fetch('/api/preferences');
+        console.log('API response status:', response.status);
+
         if (response.ok) {
-          const data = await response.json();
-          setPreferences(data);
-          if (data.backgroundImage) {
-            setBackgroundImage(data.backgroundImage);
+          // User is authenticated since API call succeeded
+          console.log('User is authenticated, loading preferences...');
+
+          try {
+            const data = await response.json();
+            console.log('Loaded preferences:', data);
+
+            setPreferences(data);
+            console.log('Loading preferences - backgroundImage:', data.backgroundImage, 'selectedTemplate:', data.selectedTemplate);
+
+            if (data.backgroundImage) {
+              // User has a custom background image
+              console.log('Setting custom background:', data.backgroundImage);
+              setBackgroundImage(data.backgroundImage);
+              // Clear template selection since custom image takes priority
+              setSelectedTemplate(-1);
+            } else if (data.selectedTemplate !== undefined && data.selectedTemplate >= 0) {
+              // User has a template selected (no custom background)
+              const templateIndex = data.selectedTemplate;
+              console.log('Setting template background:', templateIndex, templates[templateIndex]?.backgroundImage);
+              setSelectedTemplate(templateIndex);
+              setBackgroundImage(templates[templateIndex]?.backgroundImage || null);
+            } else {
+              // Default case - no custom background, no template
+              console.log('Setting default background');
+              setBackgroundImage(null);
+              setSelectedTemplate(0); // Default to first template
+            }
+            setIsAuthenticated(true);
+          } catch (jsonError) {
+            console.error('Error parsing preferences JSON:', jsonError);
+            setIsAuthenticated(false);
           }
-          if (data.selectedTemplate !== undefined) {
-            setSelectedTemplate(data.selectedTemplate);
-          }
-          setIsAuthenticated(true);
         } else if (response.status === 401) {
           // User not authenticated, use default preferences
           console.log('User not authenticated, using default preferences');
@@ -245,7 +274,20 @@ export default function AdminPreviewPage() {
 
       if (response.ok) {
         const action = result.action || 'saved';
-        alert(`Preferences ${action} successfully!`);
+        let message = `✅ Preferences ${action} successfully!\n\n`;
+
+        // If an access code was generated, show it prominently
+        if (result.accessCode) {
+          message += `🔑 ACCESS CODE: ${result.accessCode}\n\n`;
+          message += `⚠️  IMPORTANT: Save this code!\n`;
+          message += `You'll need it to access your organization.\n\n`;
+          message += `Code: ${result.accessCode}`;
+        } else {
+          message += `Your preferences have been saved.`;
+        }
+
+        alert(message);
+        console.log('Access code displayed:', result.accessCode);
       } else {
         alert(`Failed to save preferences: ${result.error || 'Unknown error'}`);
       }

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/jwt';
 import { connectDB } from '@/lib/mongodb';
 import PreferencesModel from '@/models/Preferences';
+import User from '@/models/User';
 
 // Helper function to get current user
 async function getCurrentUser() {
@@ -108,6 +109,47 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log(`Saving preferences for user: ${userId}`, body);
 
+    // Check if user already has an access code
+    const existingUser = await User.findById(userId).select('generatedCode');
+
+    // Generate a 6-digit access code only if user doesn't have one
+    let accessCode = null;
+    if (!existingUser?.generatedCode) {
+      const generateAccessCode = () => {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+      };
+
+      // Generate unique 6-digit code
+      accessCode = generateAccessCode();
+      let codeExists = true;
+      let attempts = 0;
+
+      while (codeExists && attempts < 10) {
+        const existingCodeUser = await User.findOne({ generatedCode: accessCode });
+        if (!existingCodeUser) {
+          codeExists = false;
+        } else {
+          accessCode = generateAccessCode();
+          attempts++;
+        }
+      }
+
+      if (codeExists) {
+        console.error('Could not generate unique access code after 10 attempts');
+        return NextResponse.json(
+          { error: 'Failed to generate unique access code' },
+          { status: 500 }
+        );
+      }
+
+      // Update user with the generated code
+      await User.findByIdAndUpdate(userId, {
+        generatedCode: accessCode
+      });
+
+      console.log(`Generated access code ${accessCode} for user ${userId}`);
+    }
+
     // Check if preferences already exist
     const existingPreferences = await PreferencesModel.findOne({ userId });
     console.log(`Existing preferences found: ${existingPreferences ? 'YES' : 'NO'}`);
@@ -133,6 +175,7 @@ export async function POST(request: NextRequest) {
       success: true,
       preferences,
       action: existingPreferences ? 'updated' : 'created',
+      accessCode, // Return the generated code (null if already existed)
     });
   } catch (error) {
     console.error('Error saving preferences:', error);

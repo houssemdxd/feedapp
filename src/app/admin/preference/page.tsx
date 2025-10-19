@@ -19,6 +19,7 @@ export default function AdminPreferencePage() {
     liquidGlassEffect: false,
     selectedTemplate: 0,
   });
+  const [accessCode, setAccessCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -45,7 +46,23 @@ export default function AdminPreferencePage() {
       }
     };
 
-    fetchPreferences();
+    const fetchAccessCode = async () => {
+      try {
+        const userResponse = await fetch('/api/user/access-code');
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.generatedCode) {
+            console.log('Found existing access code:', userData.generatedCode);
+            setAccessCode(userData.generatedCode);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching access code:', error);
+      }
+    };
+
+    // Fetch both preferences and access code
+    Promise.all([fetchPreferences(), fetchAccessCode()]);
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -108,7 +125,14 @@ export default function AdminPreferencePage() {
 
       if (response.ok) {
         const action = result.action || 'saved';
-        setMessage(`Preferences ${action} successfully!`);
+
+        // If an access code was generated, display it
+        if (result.accessCode) {
+          setAccessCode(result.accessCode);
+          setMessage(`Preferences ${action} successfully!\n\n🔑 Your Access Code: ${result.accessCode}\n\nKeep this code safe - you'll need it to access your organization!`);
+        } else {
+          setMessage(`Preferences ${action} successfully!`);
+        }
       } else {
         setMessage(`Failed to save preferences: ${result.error || 'Unknown error'}`);
       }
@@ -210,6 +234,40 @@ export default function AdminPreferencePage() {
             />
           </div>
         </div> */}
+
+        {/* Access Code Display */}
+        {accessCode && (
+          <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">🔑 Access Code</h3>
+              <span className="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded-full">
+                Active
+              </span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="flex-1">
+                <div className="text-2xl font-mono font-bold text-blue-900 dark:text-blue-100 tracking-wider">
+                  {accessCode}
+                </div>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                  Use this code to access your organization
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(accessCode);
+                  setMessage('Access code copied to clipboard!');
+                }}
+                className="flex-shrink-0 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
+                title="Copy to clipboard"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <button
