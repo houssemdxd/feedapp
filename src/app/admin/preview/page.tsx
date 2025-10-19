@@ -19,6 +19,7 @@ export default function AdminPreviewPage() {
     liquidGlassEffect: false,
     selectedTemplate: 0,
   });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState(0);
   const [palettePosition, setPalettePosition] = useState({ top: 0, left: 0 });
@@ -26,8 +27,38 @@ export default function AdminPreviewPage() {
   const [elementRef, setElementRef] = useState<HTMLElement | null>(null);
 
   const [tempColor, setTempColor] = useState('');
-  const [liquidGlassEffect, setLiquidGlassEffect] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      try {
+        const response = await fetch('/api/preferences');
+        if (response.ok) {
+          const data = await response.json();
+          setPreferences(data);
+          if (data.backgroundImage) {
+            setBackgroundImage(data.backgroundImage);
+          }
+          if (data.selectedTemplate !== undefined) {
+            setSelectedTemplate(data.selectedTemplate);
+          }
+          setIsAuthenticated(true);
+        } else if (response.status === 401) {
+          // User not authenticated, use default preferences
+          console.log('User not authenticated, using default preferences');
+          setIsAuthenticated(false);
+        } else {
+          console.error('Failed to load preferences:', response.statusText);
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error fetching preferences:', error);
+        // Use default preferences if API call fails
+        setIsAuthenticated(false);
+      }
+    };
+
+    fetchPreferences();
+  }, []);
 
   const handleElementClick = (element: string, event: React.MouseEvent) => {
     const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -171,6 +202,11 @@ export default function AdminPreviewPage() {
   };
 
   const handleSavePreferences = async () => {
+    if (!isAuthenticated) {
+      alert('You must be logged in to save preferences');
+      return;
+    }
+
     try {
       const response = await fetch('/api/preferences', {
         method: 'POST',
@@ -183,10 +219,13 @@ export default function AdminPreviewPage() {
         }),
       });
 
+      const result = await response.json();
+
       if (response.ok) {
-        alert('Preferences saved successfully!');
+        const action = result.action || 'saved';
+        alert(`Preferences ${action} successfully!`);
       } else {
-        alert('Failed to save preferences');
+        alert(`Failed to save preferences: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -198,19 +237,42 @@ export default function AdminPreviewPage() {
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
+        console.log('Fetching preferences...');
         const response = await fetch('/api/preferences');
+        console.log('API response status:', response.status);
+
         if (response.ok) {
-          const data = await response.json();
-          setPreferences(data);
-          if (data.backgroundImage) {
-            setBackgroundImage(data.backgroundImage);
+          // User is authenticated since API call succeeded
+          console.log('User is authenticated, loading preferences...');
+
+          try {
+            const data = await response.json();
+            console.log('Loaded preferences:', data);
+
+            setPreferences(data);
+            if (data.backgroundImage) {
+              setBackgroundImage(data.backgroundImage);
+            }
+            if (data.selectedTemplate !== undefined) {
+              setSelectedTemplate(data.selectedTemplate);
+            }
+            setIsAuthenticated(true);
+          } catch (jsonError) {
+            console.error('Error parsing preferences JSON:', jsonError);
+            setIsAuthenticated(false);
           }
-          if (data.selectedTemplate !== undefined) {
-            setSelectedTemplate(data.selectedTemplate);
-          }
+        } else if (response.status === 401) {
+          // User not authenticated, use default preferences
+          console.log('User not authenticated, using default preferences');
+          setIsAuthenticated(false);
+        } else {
+          console.error('Failed to load preferences:', response.statusText);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Error fetching preferences:', error);
+        // Use default preferences if API call fails
+        setIsAuthenticated(false);
       }
     };
 
@@ -379,6 +441,7 @@ export default function AdminPreviewPage() {
 
         {/* Controls */}
         <div className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Customize Preview</h2>
             <div className="flex space-x-2">
@@ -388,7 +451,15 @@ export default function AdminPreviewPage() {
                 </svg>
                 <span>Choose Image</span>
               </button>
-              <button onClick={handleSavePreferences} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-md flex items-center space-x-1 text-sm">
+              <button
+                onClick={handleSavePreferences}
+                disabled={!isAuthenticated}
+                className={`px-3 py-1 rounded-md flex items-center space-x-1 text-sm ${
+                  isAuthenticated
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                }`}
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>

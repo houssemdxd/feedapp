@@ -48,6 +48,3 @@ PreferencesSchema.index({ userId: 1 }, { unique: true });
 
 const PreferencesModel: Model<IPreferences> = models.Preferences || model<IPreferences>("Preferences", PreferencesSchema);
 export default PreferencesModel;
-
-const PreferencesModel: Model<IPreferences> = models.Preferences || model<IPreferences>("Preferences", PreferencesSchema);
-export default PreferencesModel;
