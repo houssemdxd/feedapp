@@ -1,0 +1,52 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { v4 as uuidv4 } from 'uuid';
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.formData();
+    const file: File | null = data.get('file') as unknown as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file received.' }, { status: 400 });
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // Generate unique filename
+    const extension = file.name.split('.').pop();
+    const filename = `${uuidv4()}.${extension}`;
+
+    // Save to public/images/logos directory
+    const uploadDir = join(process.cwd(), 'public', 'images', 'logos');
+
+    // Ensure directory exists
+    try {
+      await mkdir(uploadDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, continue
+      console.log('Directory creation result:', error);
+    }
+
+    const filepath = join(uploadDir, filename);
+
+    // Write the file
+    await writeFile(filepath, buffer);
+
+    // Return the path that can be used in the app
+    const fileUrl = `/images/logos/${filename}`;
+
+    return NextResponse.json({
+      success: true,
+      filename,
+      path: fileUrl,
+      message: 'File uploaded successfully'
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

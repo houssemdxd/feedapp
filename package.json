@@ -24,6 +24,7 @@
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.3",
     "flatpickr": "^4.6.13",
+    "html5-qrcode": "^2.3.8",
     "jose": "^6.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.19.0",
