@@ -9,6 +9,7 @@ export interface IUser {
   email: string;
   password: string;
   role: UserRole;
+  generatedCode?: string; // 6-digit access code
 }
 
 const UserSchema = new Schema<IUser>(
@@ -18,6 +19,7 @@ const UserSchema = new Schema<IUser>(
     email:     { type: String, required: true, unique: true, lowercase: true, index: true },
     password:  { type: String, required: true },
     role:      { type: String, enum: ["client", "organization"], default: "client", required: true },
+    generatedCode: { type: String, unique: true, sparse: true }, // 6-digit code, optional but unique when present
   },
   { timestamps: true }
 );
