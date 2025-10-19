@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Preferences } from '@/lib/preferences';
+import BackgroundGallery from '@/components/BackgroundGallery';
 
 export default function AdminPreviewPage() {
   const [preferences, setPreferences] = useState<Preferences>({
-    logo: '/images/user/owner.jpg',
+    logo: '',
     name: 'Organization Name',
     description: 'Welcome to Our Organization, Feel free to give your feedback. Your Opinion Matters!',
     backgroundColor: '#f3f4f6',
@@ -24,7 +25,6 @@ export default function AdminPreviewPage() {
   const [selectedTemplate, setSelectedTemplate] = useState(0);
   const [palettePosition, setPalettePosition] = useState({ top: 0, left: 0 });
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
-  const [elementRef, setElementRef] = useState<HTMLElement | null>(null);
 
   const [tempColor, setTempColor] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,14 +127,15 @@ export default function AdminPreviewPage() {
   ];
 
   const applyTemplate = (index: number) => {
+    console.log('Applying template:', index, 'background:', templates[index].backgroundImage);
     setSelectedTemplate(index);
     setPreferences(prev => ({
       ...prev,
       backgroundColor: templates[index].backgroundColor,
       selectedTemplate: index,
-      backgroundImage: null
+      backgroundImage: null // Clear custom background when template is selected
     }));
-    setBackgroundImage(templates[index].backgroundImage);
+    setBackgroundImage(templates[index].backgroundImage); // Use template's background
   };
 
   const handleBackgroundColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,11 +272,25 @@ export default function AdminPreviewPage() {
             console.log('Loaded preferences:', data);
 
             setPreferences(data);
+            console.log('Loading preferences - backgroundImage:', data.backgroundImage, 'selectedTemplate:', data.selectedTemplate);
+
             if (data.backgroundImage) {
+              // User has a custom background image
+              console.log('Setting custom background:', data.backgroundImage);
               setBackgroundImage(data.backgroundImage);
-            }
-            if (data.selectedTemplate !== undefined) {
-              setSelectedTemplate(data.selectedTemplate);
+              // Clear template selection since custom image takes priority
+              setSelectedTemplate(-1);
+            } else if (data.selectedTemplate !== undefined && data.selectedTemplate >= 0) {
+              // User has a template selected (no custom background)
+              const templateIndex = data.selectedTemplate;
+              console.log('Setting template background:', templateIndex, templates[templateIndex]?.backgroundImage);
+              setSelectedTemplate(templateIndex);
+              setBackgroundImage(templates[templateIndex]?.backgroundImage || null);
+            } else {
+              // Default case - no custom background, no template
+              console.log('Setting default background');
+              setBackgroundImage(null);
+              setSelectedTemplate(0); // Default to first template
             }
             setIsAuthenticated(true);
           } catch (jsonError) {
@@ -500,6 +515,7 @@ export default function AdminPreviewPage() {
               </button>
             </div>
           </div>
+
           {/* Liquid Glass Effect Toggle */}
           <div className="mb-4">
             <div className="flex items-center justify-between">
@@ -521,6 +537,22 @@ export default function AdminPreviewPage() {
               Apply glassmorphism effect to form elements and app bar
             </p>
           </div>
+
+          {/* Background Gallery */}
+          <BackgroundGallery
+            onSelectBackground={(path) => {
+              console.log('Selecting background from gallery:', path);
+              setBackgroundImage(path);
+              setPreferences(prev => ({
+                ...prev,
+                backgroundImage: path,
+                selectedTemplate: -1
+              }));
+              setSelectedTemplate(-1);
+            }}
+            currentBackground={backgroundImage}
+          />
+
           {/* Template Options - Desktop Only */}
           <div className="hidden md:block">
             <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">Template Options</label>
