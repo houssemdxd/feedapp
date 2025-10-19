@@ -82,7 +82,7 @@ export default function FormBuilderPage() {
               onClick={handleSubmit}
               disabled={loading}
             >
-              {loading ? "Saving..." : "Submit"}
+              {loading ? "Saving...." : "Submit"}
             </button>
           </div>
         </div>
