@@ -324,7 +324,19 @@ export default function AdminPreviewPage() {
               {/* Content */}
               <div className="h-full flex flex-col">
                 {/* App Bar */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer" style={{ backgroundColor: preferences.appBarBackgroundColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('appBar', e); }}>
+                <div
+                  className={`flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer transition-all duration-300 ${
+                    preferences.liquidGlassEffect
+                      ? 'backdrop-blur-md bg-white/70 dark:bg-gray-800/70 border border-white/20 shadow-xl hover:shadow-2xl hover:bg-white/80 dark:hover:bg-gray-800/80'
+                      : ''
+                  }`}
+                  style={{
+                    backgroundColor: preferences.liquidGlassEffect ? 'transparent' : preferences.appBarBackgroundColor,
+                    backdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none',
+                    WebkitBackdropFilter: preferences.liquidGlassEffect ? 'blur(16px)' : 'none'
+                  }}
+                  onClick={(e) => { e.stopPropagation(); handleElementClick('appBar', e); }}
+                >
                   <h1 className="text-lg font-bold cursor-pointer" style={{ color: preferences.organizationNameColor }} onClick={(e) => { e.stopPropagation(); handleElementClick('orgName', e); }}>
                     {preferences.name}
                   </h1>
@@ -485,7 +497,7 @@ export default function AdminPreviewPage() {
               </button>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Apply glassmorphism effect to form elements
+              Apply glassmorphism effect to form elements and app bar
             </p>
           </div>
           {/* Template Options - Desktop Only */}
