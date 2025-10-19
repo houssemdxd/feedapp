@@ -143,13 +143,37 @@ export default function AdminPreviewPage() {
     setSelectedTemplate(-1); // Deselect template when custom color is chosen
   };
 
-  const handleBackgroundImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setBackgroundImage(url);
-      setPreferences(prev => ({ ...prev, backgroundImage: url, selectedTemplate: -1 }));
-      setSelectedTemplate(-1); // Deselect template when custom image is chosen
+      try {
+        // Upload the file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const uploadResponse = await fetch('/api/upload/background', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResponse.ok && uploadResult.success) {
+          // Update both the display state and the preferences
+          setBackgroundImage(uploadResult.path);
+          setPreferences(prev => ({
+            ...prev,
+            backgroundImage: uploadResult.path,
+            selectedTemplate: -1 // Deselect template when custom image is chosen
+          }));
+          setSelectedTemplate(-1);
+        } else {
+          alert(`Failed to upload background image: ${uploadResult.error || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error('Error uploading background image:', error);
+        alert('Error uploading background image');
+      }
     }
   };
 
@@ -213,10 +237,7 @@ export default function AdminPreviewPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...preferences,
-          backgroundImage: backgroundImage,
-        }),
+        body: JSON.stringify(preferences),
       });
 
       const result = await response.json();
