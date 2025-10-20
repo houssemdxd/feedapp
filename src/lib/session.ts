@@ -53,12 +53,12 @@ export async function getCurrentUser() {
   const token = (await cookies()).get("session")?.value;
   if (!token) return null;
 
-  const payload = await verifyAccessToken<{ userId: string }>(token);
-  if (!payload?.userId) return null;
+  const payload = await verifyAccessToken<{ userId: string, role: string, }>(token);
+  if (!payload?.userId && !payload?.role) return null;
 
   await connectDB();
   const user = await User.findById(payload.userId)
-    .select("_id email fname lname role")
+    .select("_id email fname lname role bio image country postalCode city userName phone")
     .lean();
 
   if (!user) return null;
@@ -68,5 +68,12 @@ export async function getCurrentUser() {
     fname: user.fname,
     lname: user.lname,
     role: user.role ?? "client",
+    bio: user.bio ?? "none",
+    phone: user.phone ?? "none",
+    country: user.country ?? "none",
+    postalCode: user.postalCode ?? "none",
+    city: user.city ?? "none",
+    image: user.image ?? "/images/user/owner.jpg",
+    userName: user.userName ?? "none",
   };
 }

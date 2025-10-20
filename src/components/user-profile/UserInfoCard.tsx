@@ -15,11 +15,15 @@ type SessionUser = {
   fname: string;
   lname: string;
   role: "client" | "organization";
-  // Optional extended fields (fallbacks provided below)
+  // Optional fields (we provide static fallbacks if undefined)
+  city?: string;
   phone?: string;
   bio?: string;
+  image?: string;
+  userName?: string;
 };
 type MeResponse = { user: SessionUser | null };
+
 
 // -------- Small skeletons for smooth loading --------
 function LineSkeleton({ width = "12ch" }: { width?: string }) {
@@ -62,10 +66,7 @@ export default function UserInfoCard() {
   const [email, setEmail] = useState("randomuser@pimjo.com");
   const [phone, setPhone] = useState("+09 363 398 46");
   const [bio, setBio] = useState("Team Manager");
-  const [facebook, setFacebook] = useState("https://www.facebook.com/PimjoHQ");
-  const [xcom, setXcom] = useState("https://x.com/PimjoHQ");
-  const [linkedin, setLinkedin] = useState("https://www.linkedin.com/company/pimjo");
-  const [instagram, setInstagram] = useState("https://instagram.com/PimjoHQ");
+
 
   // fetch current user once on mount
   useEffect(() => {
@@ -96,11 +97,11 @@ export default function UserInfoCard() {
   const display = useMemo(() => {
     const u = user;
     return {
-      fname: u?.fname?.trim() || "Musharof",
-      lname: u?.lname?.trim() || "Chowdhury",
-      email: u?.email?.trim() || "randomuser@pimjo.com",
-      phone: u?.phone?.trim() || "+09 363 398 46",
-      bio: u?.bio?.trim() || "Team Manager",
+      fname: u?.fname?.trim() || "none",
+      lname: u?.lname?.trim() || "none",
+      email: u?.email?.trim() || "none",
+      phone: u?.phone?.trim() || "none",
+      bio: u?.bio?.trim() || "none",
     };
   }, [user]);
 
@@ -122,16 +123,36 @@ export default function UserInfoCard() {
     // await fetch("/api/profile", { method: "POST", body: JSON.stringify({ firstName, lastName, email, phone, bio, facebook, xcom, linkedin, instagram })})
 
     // Optimistically update the visible card immediately
+    const res = await fetch("/api/auth/profile", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        fname: firstName,
+        lname: lastName,
+        phone: phone,
+        bio: bio,
+      }),
+    });
+
+     if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      alert(j?.error ?? "Failed to save");
+      return;
+    }
+
+    const j = (await res.json()) as { user: SessionUser };
     setUser((prev) => {
       const base: SessionUser =
         prev ?? {
           _id: "static-id",
-          email,
+          email: email,
           fname: firstName,
           lname: lastName,
           role: "client",
-          phone,
-          bio,
+          phone: phone,
+          bio: bio,
         };
       return {
         ...base,
@@ -246,34 +267,8 @@ export default function UserInfoCard() {
               handleSave();
             }}
           >
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
+            <div className="custom-scrollbar h-[350px] overflow-y-auto px-2 pb-3">
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value={xcom} onChange={(e) => setXcom(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>Linkedin</Label>
-                    <Input type="text" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} />
-                  </div>
-                </div>
-              </div>
 
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">

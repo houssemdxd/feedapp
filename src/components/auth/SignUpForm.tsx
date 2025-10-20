@@ -8,6 +8,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import Select from "../form/Select";
 import { useRouter } from "next/navigation";
+import Spinner from "../ui/spinner/Spinner";
 
 interface FormData {
   fname: string;
@@ -49,13 +50,47 @@ export default function SignUpForm() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
 
+  //   if (!isChecked) {
+  //     setError("You must accept Terms and Privacy Policy");
+  //     return;
+  //   }
+
+  //   setLoading(true);
+  //   setError("");
+
+  //   try {
+  //     const res = await fetch("/api/auth/signup", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify(formData),
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (!res.ok) throw new Error(data.error || "Something went wrong");
+
+  //     //alert("User created successfully! You can now log in.");
+  //     setFormData({ fname: "", lname: "", email: "", password: "", role: "client" });
+  //     setIsChecked(false);
+  //     router.replace("/signin?signup=success");
+
+  //   } catch (err: unknown) {
+  //     if (err instanceof Error) setError(err.message);
+  //     else setError(String(err));
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!isChecked) {
       setError("You must accept Terms and Privacy Policy");
       return;
     }
+    if (loading) return; // guard double-clicks
 
     setLoading(true);
     setError("");
@@ -68,22 +103,17 @@ export default function SignUpForm() {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data.error || "Something went wrong");
 
-      alert("User created successfully! You can now log in.");
       setFormData({ fname: "", lname: "", email: "", password: "", role: "client" });
       setIsChecked(false);
       router.replace("/signin?signup=success");
-
     } catch (err: unknown) {
-      if (err instanceof Error) setError(err.message);
-      else setError(String(err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full overflow-y-auto no-scrollbar">
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
@@ -195,14 +225,29 @@ export default function SignUpForm() {
             </div>
 
             {/* Submit */}
-            <button
+            {/* <button
               type="submit"
               disabled={loading}
               className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white transition rounded-lg bg-brand-500 shadow-theme-xs hover:bg-brand-600"
             >
               {loading ? "Signing up..." : "Sign Up"}
+            </button> */}
+             <button
+              type="submit"
+              disabled={loading}
+              aria-busy={loading || undefined}
+              className={[
+                "relative flex w-full items-center justify-center gap-2",
+                "rounded-lg px-4 py-3 text-sm font-medium text-white shadow-theme-xs transition",
+                "bg-brand-500 hover:bg-brand-600",
+                loading ? "cursor-not-allowed opacity-90" : ""
+              ].join(" ")}
+            >
+              {loading && <Spinner />}
+              <span className={loading ? "animate-pulse" : ""}>
+                {loading ? "Signing up..." : "Sign Up"}
+              </span>
             </button>
-            
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{' '}
               <Link 
