@@ -1,13 +1,14 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 
 interface QRScannerProps {
   onScan: (code: string) => void;
   onCancel: () => void;
 }
 
-const QRScanner: React.FC<QRScannerProps> = ({ onScan, onCancel }) => {
-  const html5QrCodeRef = useRef<any>(null);
+export default function QRScanner({ onScan, onCancel }: QRScannerProps) {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = "qr-scanner";
 
   useEffect(() => {
@@ -15,22 +16,28 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onCancel }) => {
 
     import("html5-qrcode").then(({ Html5Qrcode }) => {
       if (!isMounted) return;
-      // Si une instance existe déjà, on l'arrête
-      if (html5QrCodeRef.current) {
-        html5QrCodeRef.current.stop().then(() => html5QrCodeRef.current.clear());
+
+      // Si une instance existe déjà, on l'arrête et la libère
+      if (scannerRef.current) {
+        scannerRef.current
+          .stop()
+          .then(() => scannerRef.current?.clear())
+          .catch(() => {});
       }
 
-      html5QrCodeRef.current = new Html5Qrcode(containerId);
+      scannerRef.current = new Html5Qrcode(containerId);
 
-      html5QrCodeRef.current
+      scannerRef.current
         .start(
           { facingMode: "environment" },
           { fps: 10, qrbox: 250 },
           (decodedText: string) => {
             onScan(decodedText);
+            // On peut arrêter automatiquement si nécessaire
+             scannerRef.current?.stop().then(() => scannerRef.current?.clear());
           },
           (errorMessage: any) => {
-            // console.warn(errorMessage);
+            // console.log(errorMessage);
           }
         )
         .catch((err: any) => console.error(err));
@@ -38,27 +45,27 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onCancel }) => {
 
     return () => {
       isMounted = false;
-      if (html5QrCodeRef.current) {
-        html5QrCodeRef.current
+      if (scannerRef.current) {
+        scannerRef.current
           .stop()
-          .then(() => html5QrCodeRef.current.clear())
-          .catch((err: any) => console.error(err));
+          .then(() => scannerRef.current?.clear())
+          .catch(() => {});
       }
     };
   }, [onScan]);
 
   const handleCancel = () => {
-    if (html5QrCodeRef.current) {
-      html5QrCodeRef.current
+    if (scannerRef.current) {
+      scannerRef.current
         .stop()
-        .then(() => html5QrCodeRef.current.clear())
-        .catch((err: any) => console.error(err));
+        .then(() => scannerRef.current?.clear())
+        .catch(() => {});
     }
     onCancel();
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center w-full">
       <div id={containerId} className="w-full h-[300px] bg-black" />
       <button
         className="mt-2 px-4 py-2 bg-red-500 text-white rounded"
@@ -68,6 +75,4 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onCancel }) => {
       </button>
     </div>
   );
-};
-
-export default QRScanner;
+}

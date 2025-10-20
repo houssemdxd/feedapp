@@ -53,7 +53,7 @@ export default function SignInForm() {
 
       alert("✅ Login successful!");
       // Redirect to dashboard
-      router.push("/admin");
+      router.push("/client");
     } catch (err) {
       setError("Something went wrong. Try again later.");
     }
