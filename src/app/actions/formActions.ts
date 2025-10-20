@@ -8,6 +8,22 @@ import Question from "@/models/Question";
 import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 
+// Type helpers
+interface LeanForm {
+  _id: mongoose.Types.ObjectId;
+  title: string;
+  type: string;
+  createdAt: Date;
+}
+
+interface LeanQuestion {
+  _id: mongoose.Types.ObjectId;
+  question: string;
+  type: string;
+  elements?: any[];
+  formId: mongoose.Types.ObjectId;
+}
+
 // Fetch all forms and surveys for the current user
 export async function getAllFormTemplates() {
   try {
@@ -15,19 +31,21 @@ export async function getAllFormTemplates() {
     const userId = await getCurrentUser();
     if (!userId) throw new Error("User not authenticated");
 
-    const forms = await FormTemplate.find({ type: "form", userId }).lean();
-    const surveys = await FormTemplate.find({ type: "survey", userId }).lean();
+    const [forms, surveys] = await Promise.all([
+      FormTemplate.find({ type: "form", userId }).lean<LeanForm[]>(),
+      FormTemplate.find({ type: "survey", userId }).lean<LeanForm[]>(),
+    ]);
 
     const data = [...forms, ...surveys].map((f) => ({
-      id: f._id.toString(),
+      id: f._id?.toString() ?? "",
       title: f.title,
       type: f.type,
-      createdAt: f.createdAt.toISOString(),
+      createdAt: f.createdAt?.toISOString() ?? "",
     }));
 
     return { success: true, data };
   } catch (err) {
-    console.error(err);
+    console.error("🔥 Error fetching forms:", err);
     return { success: false, error: "Failed to fetch forms" };
   }
 }
@@ -41,25 +59,25 @@ export async function getFormTemplateById(formId: string) {
 
     const objectId = new mongoose.Types.ObjectId(formId);
 
-    const form = await FormTemplate.findOne({ _id: objectId, userId }).lean();
+    const form = await FormTemplate.findOne({ _id: objectId, userId }).lean<LeanForm>();
     if (!form) {
       console.log("❌ Form not found or not owned by user:", formId);
       return { success: false, error: "Form not found" };
     }
 
-    const questions = await Question.find({ formId: objectId }).lean();
+    const questions = await Question.find({ formId: objectId }).lean<LeanQuestion[]>();
     console.log("✅ Found", questions.length, "questions for form:", formId);
 
     return {
       success: true,
       data: {
         form: {
-          id: form._id.toString(),
+          id: form._id?.toString() ?? "",
           title: form.title,
           type: form.type,
         },
         questions: questions.map((q) => ({
-          id: q._id.toString(),
+          id: q._id?.toString() ?? "",
           question: q.question,
           type: q.type,
           elements: q.elements || [],
@@ -79,7 +97,7 @@ export async function deleteFormTemplate(id: string) {
     const userId = await getCurrentUser();
     if (!userId) throw new Error("User not authenticated");
 
-    const deletedForm = await FormTemplate.findOneAndDelete({ _id: id, userId });
+    const deletedForm = await FormTemplate.findOneAndDelete({ _id: id, userId }).lean<LeanForm>();
     if (!deletedForm) {
       return { success: false, error: "Item not found or not owned by user" };
     }
@@ -100,25 +118,21 @@ export async function createFormAction({ title, type, questions }: any) {
     await connectDB();
     console.log("✅ MongoDB connected");
 
-    console.log("👤 Fetching current user...");
     const user = await getCurrentUser();
     if (!user) throw new Error("User not authenticated");
     console.log("🔹 Current user:", user);
 
-    // Convert string _id to ObjectId
     const userObjectId = new mongoose.Types.ObjectId(user._id);
     console.log("🔹 Converted user._id to ObjectId:", userObjectId);
 
-    console.log("📝 Creating form with userId...");
     const form = await FormTemplate.create({
       title,
       type,
-      userId: new mongoose.Types.ObjectId(user._id), // <--- userId guaranteed
+      userId: userObjectId,
     });
     console.log("✅ Form created:", form);
 
-    if (questions && questions.length > 0) {
-      console.log(`📝 Inserting questions: ${questions.length}`);
+    if (questions?.length > 0) {
       const formattedQuestions = questions.map((q: any) => ({
         ...q,
         formId: form._id,
@@ -135,8 +149,8 @@ export async function createFormAction({ title, type, questions }: any) {
     console.error("❌ Error saving form:", err);
     return { success: false, error: "Failed to save data" };
   }
-
 }
+
 // Fetch questions by form ID (form must belong to current user)
 export async function getFormQuestionsById(formId: string) {
   try {
@@ -144,24 +158,23 @@ export async function getFormQuestionsById(formId: string) {
     const userId = await getCurrentUser();
     if (!userId) throw new Error("User not authenticated");
 
-    // Optional: verify that the form belongs to this user
-    const form = await FormTemplate.findOne({ _id: formId, userId }).lean();
+    const form = await FormTemplate.findOne({ _id: formId, userId }).lean<LeanForm>();
     if (!form) throw new Error("Form not found or not owned by user");
 
-    const questions = await Question.find({ formId }).lean();
+    const questions = await Question.find({ formId }).lean<LeanQuestion[]>();
     console.log("✅ getFormQuestionsById:", formId, "Questions:", questions.length);
 
     return {
       success: true,
       questions: questions.map((q) => ({
-        id: q._id.toString(),
+        id: q._id?.toString() ?? "",
         question: q.question,
         type: q.type,
         elements: q.elements || [],
       })),
     };
   } catch (err) {
-    console.error(err);
+    console.error("🔥 Error in getFormQuestionsById:", err);
     return { success: false, error: "Failed to fetch questions" };
   }
 }
