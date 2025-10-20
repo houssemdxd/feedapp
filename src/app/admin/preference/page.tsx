@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import QRCode from 'react-qr-code';
 import { Preferences } from '@/lib/preferences';
 //ajbouni
 //use serer 
@@ -99,6 +100,60 @@ export default function AdminPreferencePage() {
         console.error('Error uploading file:', error);
         setMessage('Error uploading logo');
       }
+    }
+  };
+
+  const copyQRCodeImage = async () => {
+    try {
+      // Get the QR code SVG element
+      const qrCodeElement = document.querySelector('.qr-code-container svg');
+      if (!qrCodeElement) {
+        setMessage('QR code not found');
+        return;
+      }
+
+      // Convert SVG to string
+      const svgData = new XMLSerializer().serializeToString(qrCodeElement);
+
+      // Create canvas and draw SVG
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      // Create blob from SVG
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      img.onload = async () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            try {
+              // Use modern clipboard API if available
+              if (navigator.clipboard && window.ClipboardItem) {
+                const item = new ClipboardItem({ 'image/png': blob });
+                await navigator.clipboard.write([item]);
+                setMessage('QR code image copied to clipboard!');
+              } else {
+                // Fallback for older browsers
+                setMessage('Please use a modern browser to copy images');
+              }
+            } catch (error) {
+              console.error('Failed to copy image:', error);
+              setMessage('Failed to copy QR code image');
+            }
+          }
+          URL.revokeObjectURL(url);
+        }, 'image/png');
+      };
+
+      img.src = url;
+    } catch (error) {
+      console.error('Error copying QR code:', error);
+      setMessage('Failed to copy QR code image');
     }
   };
 
@@ -261,13 +316,35 @@ export default function AdminPreferencePage() {
                   setMessage('Access code copied to clipboard!');
                 }}
                 className="flex-shrink-0 p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg transition-colors"
-                title="Copy to clipboard"
+                title="Copy text code"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               </button>
+              <button
+                onClick={copyQRCodeImage}
+                className="flex-shrink-0 p-2 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800 rounded-lg transition-colors"
+                title="Copy QR code image"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
             </div>
+            <div className="mt-4 flex justify-center">
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 qr-code-container">
+                <QRCode
+                  value={accessCode}
+                  size={120}
+                  style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                  viewBox={`0 0 256 256`}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 text-center">
+              Scan this QR code to quickly access your organization
+            </p>
           </div>
         )}
 
