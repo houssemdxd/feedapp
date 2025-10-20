@@ -1,62 +1,65 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState } from "react";
-import Navbar from "@/components/navbar-form/nav";
 import PaletteForm from "@/components/palette/Palette";
-import PaletteSondage from "@/components/palette/SondagePalette";
-import PalettePost from "@/components/post/PostPalette";
 import FormCanvas from "@/components/sondage/FormCanvas";
-import SondageCanvas from "@/components/sondage/SondageCanvas";
-import PostCanvas from "@/components/post/PostCanvas";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
+import { saveBuilderAction } from "./actions";
 
 export default function BuilderPage() {
-  // 🔹 Background color for the post canvas
-  const [postBgColor, setPostBgColor] = useState<string>("");
-
-  // Independent states for each tab*
   const [formComponents, setFormComponents] = useState<any[]>([]);
-  const [sondageComponents, setSondageComponents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // For Post tab: options-based instead of template selection
-  const [postOptions, setPostOptions] = useState({
-    addPhoto: true,
-    enableComments: false,
-    enableBinaryReacts: false,
-    enableNormalReacts: true,
-  });
+  const handleSubmit = async () => {
+    if (formComponents.length === 0) {
+      alert("Nothing to submit!");
+      return;
+    }
+
+    const payload = {
+      title: "Form Builder", // you can make it dynamic
+      type: "form",
+      questions: formComponents.map((el: any) => ({
+        question: el.label || el.question || "Untitled",
+        type: el.type,
+        elements: el.elements || el.options || [],
+      })),
+    };
+
+    setLoading(true);
+    const res = await saveBuilderAction(payload);
+    setLoading(false);
+
+    if (res.success) {
+      alert("✅ Form saved successfully!");
+    } else {
+      alert("❌ Failed to save: " + res.error);
+      console.error(res);
+    }
+  };
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Builder" />
+      <PageBreadcrumb pageTitle="Form Builder" />
 
-      <div className="mt-4 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.06]">
-          {/* Sidebar / Palette */}
-          <PaletteForm onAdd={(elements:any[]) => setFormComponents((prev) => [...prev, ...elements])} />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* Palette */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <PaletteForm onAdd={(els) => setFormComponents((prev) => [...prev, ...els])} />
         </div>
 
-        <div className="xl:col-span-2 rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.06]">
-          {/* Main Canvas */}
-          <div className="flex flex-col">
-            <FormCanvas components={formComponents} setComponents={setFormComponents} />
+        {/* Canvas */}
+        <div className="xl:col-span-2 rounded-2xl border border-gray-200 bg-white p-5">
+          <FormCanvas components={formComponents} setComponents={setFormComponents} />
 
-            {/* 🔹 Submit Button */}
-            <div className="p-4">
-              <button
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                onClick={() => {
-                  if (formComponents.length === 0) {
-                    alert("Nothing selected!");
-                  } else {
-                    alert(JSON.stringify(formComponents, null, 2));
-                  }
-                }}
-              >
-                Submit
-              </button>
-            </div>
+          <div className="p-4">
+            <button
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              disabled={loading}
+              onClick={handleSubmit}
+            >
+              {loading ? "Saving..." : "Submit"}
+            </button>
           </div>
         </div>
       </div>

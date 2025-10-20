@@ -1,6 +1,6 @@
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
-export type UserRole = "client" | "organization";
+ export type UserRole = "client" | "organization";
 
 export interface IUser {
   _id: Types.ObjectId;
@@ -18,6 +18,7 @@ export interface IUser {
   phone?: string | null;
 
   image?: string | null;
+  generatedCode?: string; // 6-digit access code
 }
 
 const UserSchema = new Schema<IUser>(
@@ -35,6 +36,7 @@ const UserSchema = new Schema<IUser>(
     phone: { type: String, required: false, trim: true },
 
     image:      { type: String, default: null },
+    generatedCode: { type: String, unique: true, sparse: true }, // 6-digit code, optional but unique when present
   },
   { timestamps: true }
 );

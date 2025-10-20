@@ -1,9 +1,11 @@
+// app/(full-width-pages)/(auth)/reset-password/page.tsx
+import { Suspense } from "react";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 
-/**
-* This page is opened via the email link: /reset-password?token=RAW_TOKEN
-* ForgotPasswordForm automatically switches to reset mode when `token` is present.
-*/
 export default function Page() {
-return <ForgotPasswordForm />;
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordForm />
+    </Suspense>
+  );
 }

@@ -5,80 +5,95 @@ import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import EditableCard from "../formElements/EditableCard";
 
-export default function FormCanvas({ components, setComponents }: any) {
+export default function FormCanvas({ components = [], setComponents }: any) {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [tempLabel, setTempLabel] = useState("");
+  const [tempQuestion, setTempQuestion] = useState("");
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Ensure unique IDs for arrays
   const ensureUniqueIds = (items: any[]): any[] =>
     items.map((item) => ({ ...item, id: uuidv4() }));
 
-  const handleDrop = (e: any, dropIndex?: number) => {
-    e.preventDefault();
-    e.stopPropagation();
+const handleDrop = (e: any, dropIndex?: number) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-    const data = JSON.parse(e.dataTransfer.getData("component"));
+  const data = JSON.parse(e.dataTransfer.getData("component"));
+  let newElements: any[] = [];
 
-    let newElements: any[] = [];
+  // ✅ If it's a predefined group of elements, assign unique IDs
+  if (data.type === "predefined" && Array.isArray(data.elements)) {
+    newElements = ensureUniqueIds(data.elements);
+  } else {
+    // ✅ Ensure consistent defaults
+    const defaultElementsMap: Record<string, string[]> = {
+      checkbox: ["Option 1", "Option 2", "Option 3"],
+      radio: ["Choice A", "Choice B", "Choice C"],
+      image: [],
+    };
 
-    // Check if it's a predefined card
-    if (data.type === "predefined" && Array.isArray(data.elements)) {
-      newElements = ensureUniqueIds(data.elements);
-    } else {
-      // single component
-      let extraFields = {};
-      if (data.type === "checkbox" || data.type === "radio") {
-        extraFields = { options: ["Option 1", "Option 2", "Option 3"] };
-      }
-      newElements = [{ ...data, id: uuidv4(), label: "New Question", ...extraFields }];
-    }
+    const defaultElements = defaultElementsMap[data.type] || [];
 
-    setComponents((prev: any) => {
-      const updated = [...prev];
-      const index = dropIndex ?? prev.length;
-      updated.splice(index, 0, ...newElements);
-      return updated;
-    });
+    // ✅ Ensure the dropped element includes default `elements`
+    newElements = [
+      {
+        id: uuidv4(),
+        question: "Untitled Question",
+        type: data.type,
+        elements: defaultElements,
+      },
+    ];
+  }
 
-    setDragOverIndex(null);
-  };
+  // ✅ Properly insert into the array
+  setComponents((prev: any) => {
+    const updated = [...prev];
+    const index = dropIndex ?? prev.length;
+    updated.splice(index, 0, ...newElements);
+    return updated;
+  });
 
-  const startEditing = (id: string, currentLabel: string) => {
+  setDragOverIndex(null);
+};
+
+  const startEditing = (id: string, currentQuestion: string) => {
     setEditingId(id);
-    setTempLabel(currentLabel);
+    setTempQuestion(currentQuestion);
   };
 
   const finishEditing = (id: string) => {
     setComponents((prev: any) =>
-      prev.map((c: any) => (c.id === id ? { ...c, label: tempLabel || "Untitled Question" } : c))
+      prev.map((c: any) =>
+        c.id === id ? { ...c, question: tempQuestion || "Untitled Question" } : c
+      )
     );
     setEditingId(null);
   };
 
-  const handleOptionChange = (componentId: string, optionIndex: number, value: string) => {
+  const handleElementChange = (componentId: string, index: number, value: string) => {
     setComponents((prev: any) =>
       prev.map((c: any) =>
         c.id === componentId
-          ? { ...c, options: c.options.map((opt: string, i: number) => (i === optionIndex ? value : opt)) }
+          ? { ...c, elements: c.elements.map((el: string, i: number) => (i === index ? value : el)) }
           : c
       )
     );
   };
 
-  const addOption = (componentId: string) => {
+  const addElement = (componentId: string) => {
     setComponents((prev: any) =>
       prev.map((c: any) =>
-        c.id === componentId ? { ...c, options: [...c.options, `Option ${c.options.length + 1}`] } : c
+        c.id === componentId
+          ? { ...c, elements: [...c.elements, `Option ${c.elements.length + 1}`] }
+          : c
       )
     );
   };
 
-  const removeOption = (componentId: string, optionIndex: number) => {
+  const removeElement = (componentId: string, index: number) => {
     setComponents((prev: any) =>
       prev.map((c: any) =>
         c.id === componentId
-          ? { ...c, options: c.options.filter((_: any, i: number) => i !== optionIndex) }
+          ? { ...c, elements: c.elements.filter((_: any, i: number) => i !== index) }
           : c
       )
     );
@@ -90,46 +105,62 @@ export default function FormCanvas({ components, setComponents }: any) {
 
   const renderField = (c: any) => {
     switch (c.type) {
-      case "custom-card":
+      case "input":
         return (
-          <EditableCard
-            element={c}
-            onUpdate={(updatedCard: any) => {
-              setComponents((prev: any) =>
-                prev.map((el: any) => (el.id === c.id ? updatedCard : el))
-              );
-            }}
+          <input
+            type="text"
+            placeholder="Answer here..."
+            className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900"
           />
         );
-      case "input":
-        return <input className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Answer here..." />;
+
       case "textarea":
-        return <textarea className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Your message..." />;
+        return (
+          <textarea
+            placeholder="Your message..."
+            className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900"
+          />
+        );
+
       case "rating":
         return (
-          <div className="mt-2 flex gap-1">{[1, 2, 3, 4, 5].map((r) => <span key={r}>⭐</span>)}</div>
+          <div className="mt-2 flex gap-1">
+            {[1, 2, 3, 4, 5].map((r) => (
+              <span key={r}>⭐</span>
+            ))}
+          </div>
         );
+
       case "checkbox":
       case "radio":
         return (
           <div className="mt-2 flex flex-wrap gap-4">
-            {c.options?.map((opt: string, i: number) => (
-              <div key={`${c.id}-option-${i}`} className="flex items-center gap-1">
+            {c.elements?.map((el: string, i: number) => (
+              <div key={`${c.id}-el-${i}`} className="flex items-center gap-1">
                 <input type={c.type} name={`group-${c.id}`} />
                 <input
                   type="text"
-                  value={opt}
-                  onChange={(e) => handleOptionChange(c.id, i, e.target.value)}
+                  value={el}
+                  onChange={(e) => handleElementChange(c.id, i, e.target.value)}
                   className="border rounded px-2 py-1 w-28 dark:bg-white dark:border-gray-300 dark:text-gray-900"
                 />
-                <button onClick={() => removeOption(c.id, i)} className="text-red-500 font-bold ml-1">×</button>
+                <button
+                  onClick={() => removeElement(c.id, i)}
+                  className="text-red-500 font-bold ml-1"
+                >
+                  ×
+                </button>
               </div>
             ))}
-            <button onClick={() => addOption(c.id)} className="text-sm text-blue-600 mt-2">+ Add option</button>
+            <button
+              onClick={() => addElement(c.id)}
+              className="text-sm text-blue-600 mt-2"
+            >
+              + Add option
+            </button>
           </div>
         );
-      case "text":
-        return <input type="text" placeholder="Enter text here..." className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" />;
+
       case "image":
         return (
           <div className="mt-2">
@@ -141,31 +172,63 @@ export default function FormCanvas({ components, setComponents }: any) {
                 if (file) {
                   const url = URL.createObjectURL(file);
                   setComponents((prev: any) =>
-                    prev.map((comp: any) => (comp.id === c.id ? { ...comp, src: url } : comp))
+                    prev.map((comp: any) =>
+                      comp.id === c.id ? { ...comp, elements: [url] } : comp
+                    )
                   );
                 }
               }}
             />
-            {c.src && <img src={c.src} alt="Uploaded" className="mt-2 max-h-40" />}
+            {c.elements?.[0] && (
+              <img
+                src={c.elements[0]}
+                alt="Uploaded"
+                className="mt-2 max-h-40 rounded"
+              />
+            )}
           </div>
         );
-      case "slider":
-        return <input type="range" min="0" max="100" className="w-full mt-2" />;
+
+      case "email":
+        return (
+          <input
+            type="email"
+            placeholder="Email"
+            className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900"
+          />
+        );
+
+      case "number":
+        return (
+          <input
+            type="number"
+            placeholder="Number"
+            className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900"
+          />
+        );
+
       case "color":
         return <input type="color" className="w-full mt-2 h-10 p-1" />;
+
+      case "slider":
+        return <input type="range" min="0" max="100" className="w-full mt-2" />;
+
       case "toggle":
         return (
           <label className="flex items-center gap-2 mt-2">
-            <input type="checkbox" className="toggle-checkbox" />
+            <input type="checkbox" />
             <span>Toggle</span>
           </label>
         );
+
       case "time":
-        return <input type="time" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" />;
-      case "email":
-        return <input type="email" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Email" />;
-      case "number":
-        return <input type="number" className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Number" />;
+        return (
+          <input
+            type="time"
+            className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900"
+          />
+        );
+
       default:
         return null;
     }
@@ -180,7 +243,9 @@ export default function FormCanvas({ components, setComponents }: any) {
       <h2 className="text-lg font-semibold mb-3 dark:text-white">Form Canvas</h2>
 
       {components.length === 0 && (
-        <div className="text-gray-400 text-sm dark:text-white/70">Drag components here...</div>
+        <div className="text-gray-400 text-sm dark:text-white/70">
+          Drag components here...
+        </div>
       )}
 
       <div className="max-h-[70vh] overflow-y-auto pr-1">
@@ -209,17 +274,17 @@ export default function FormCanvas({ components, setComponents }: any) {
               <input
                 className="border p-1 w-full mb-2"
                 autoFocus
-                value={tempLabel}
-                onChange={(e) => setTempLabel(e.target.value)}
+                value={tempQuestion}
+                onChange={(e) => setTempQuestion(e.target.value)}
                 onBlur={() => finishEditing(c.id)}
                 onKeyDown={(e) => e.key === "Enter" && finishEditing(c.id)}
               />
             ) : (
               <label
-                onClick={() => startEditing(c.id, c.label)}
+                onClick={() => startEditing(c.id, c.question)}
                 className="font-medium cursor-pointer dark:text-white/90"
               >
-                {c.label}
+                {c.question}
               </label>
             )}
 
