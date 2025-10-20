@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Preferences } from '@/lib/preferences';
+//ajbouni
+//use serer 
 
 export default function AdminPreferencePage() {
   const [preferences, setPreferences] = useState<Preferences>({
