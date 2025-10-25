@@ -85,7 +85,7 @@ export async function GET() {
     country: user.country ?? "none",
     postalCode: user.postalCode ?? "none",
     city: user.city ?? "none",
-    image: user.image ?? "/images/user/owner.jpg",
+    image: user.image ?? "/images/user/user-05.jpg",
     userName: user.userName ?? "none",
     },
   });

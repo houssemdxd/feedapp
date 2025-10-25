@@ -116,7 +116,7 @@ export default function UserMetaCard() {
       name: u?.userName?.trim() || "none",
       city: u?.city?.trim() || "Arizona, United States",
       bio: u?.bio?.trim() || "Team Manager",
-      image: u?.image?.trim() || "/images/user/owner.jpg",
+      image: u?.image?.trim() || "/images/user/user-05.jpg",
 
     };
   }, [user]);

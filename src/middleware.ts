@@ -12,6 +12,8 @@ type User = { userId?: string; role?: Role } & JWTPayload;
 const CLIENT_ONLY = [
   /^\/dashboard(\/.*)?$/,
   /^\/profile(\/.*)?$/,
+  /^\/client(\/.*)?$/,
+  
 ];
 
 const ORG_ONLY = [

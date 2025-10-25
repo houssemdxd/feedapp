@@ -22,7 +22,7 @@ export default function QRScanner({ onScan, onCancel }: QRScannerProps) {
         scannerRef.current
           .stop()
           .then(() => scannerRef.current?.clear())
-          .catch(() => {});
+          .catch(() => { });
       }
 
       scannerRef.current = new Html5Qrcode(containerId);
@@ -34,10 +34,10 @@ export default function QRScanner({ onScan, onCancel }: QRScannerProps) {
           (decodedText: string) => {
             onScan(decodedText);
             // On peut arrêter automatiquement si nécessaire
-             scannerRef.current?.stop().then(() => scannerRef.current?.clear());
+            scannerRef.current?.stop().then(() => scannerRef.current?.clear());
           },
           (errorMessage: any) => {
-            // console.log(errorMessage);
+            console.log("error detected !");
           }
         )
         .catch((err: any) => console.error(err));
@@ -49,7 +49,7 @@ export default function QRScanner({ onScan, onCancel }: QRScannerProps) {
         scannerRef.current
           .stop()
           .then(() => scannerRef.current?.clear())
-          .catch(() => {});
+          .catch(() => { });
       }
     };
   }, [onScan]);
@@ -59,7 +59,7 @@ export default function QRScanner({ onScan, onCancel }: QRScannerProps) {
       scannerRef.current
         .stop()
         .then(() => scannerRef.current?.clear())
-        .catch(() => {});
+        .catch(() => { });
     }
     onCancel();
   };

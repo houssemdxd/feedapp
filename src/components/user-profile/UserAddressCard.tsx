@@ -6,6 +6,8 @@ import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import CountrySelect from "../form/formatted-countries";
+import StateSelect from "../form/StateSelect";
 
 // ---- Types ----
 type SessionUser = {
@@ -14,7 +16,7 @@ type SessionUser = {
   fname: string;
   lname: string;
   role: "client" | "organization";
-  country?: string |null;    // ISO-2 preferred, but API will normalize
+  country?: string | null;    // ISO-2 preferred, but API will normalize
   city?: string | null;
   postalCode?: string | null;
 };
@@ -117,7 +119,7 @@ export default function UserAddressCard() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-console.log("country seted!!!!!!!!!!!!!!!!");
+    console.log("country seted!!!!!!!!!!!!!!!!");
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
       alert(j?.error ?? "Failed to save");
@@ -233,23 +235,19 @@ console.log("country seted!!!!!!!!!!!!!!!!");
           >
             <div className="px-2 overflow-y-auto custom-scrollbar h-[300px]">
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+
                 <div>
                   <Label>Country (ISO-2 preferred)</Label>
-                  <Input
-                    type="text"
-                    value={country}
-                    onChange={(e) => setCountry(e.target.value)}
-                    placeholder="US"
-                  />
+                  <CountrySelect value={country} onChange={setCountry} />
                 </div>
 
                 <div>
                   <Label>City/State</Label>
-                  <Input
-                    type="text"
+                 
+                  <StateSelect
+                    country={country}   // pass the country string you already have (name OR code)
                     value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Phoenix, AZ"
+                    onChange={setCity}
                   />
                 </div>
 

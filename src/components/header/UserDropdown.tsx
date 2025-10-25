@@ -187,7 +187,7 @@ export default function UserDropdown() {
             <DropdownItem
               onItemClick={() => setIsOpen(false)}
               tag="a"
-              href="/admin/profile"
+              href={user?.role=="organization" ? "/admin/profile" : "/client/profile"} 
               className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
             >
               Edit profile
