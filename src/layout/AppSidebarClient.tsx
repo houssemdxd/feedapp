@@ -29,20 +29,22 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    icon: <Image src="/images/icons/HistoryIcon.png" width={24} height={24} alt="Historique" />,
+    icon: <Image src="/images/icons/HistoryIcon.png" width={24} height={24} alt="Historique" className="dark:invert" />,
     name: "Historique",
     path: "/client",
   },
   {
-    icon: <Image src="/images/icons/QrCodeIcon.png" width={24} height={24} alt="Code" />,
+    icon: <Image src="/images/icons/QrCodeIcon.png" width={24} height={24} alt="Code" className="dark:invert" />,
     name: "Code",
     path: "/client/code",
   },
+  /*
   {
     icon: <UserCircleIcon />, // ou une image de l'utilisateur
     name: "Client Profile",
     path: "/client/profile",
   },
+  */
 ];
 
 const othersItems: NavItem[] = [
@@ -281,26 +283,26 @@ const AppSidebar: React.FC = () => {
       >
         <Link href="/">
           {isExpanded || isHovered || isMobileOpen ? (
-            <>
+            <div className="flex items-center gap-3">
               <Image
                 className="dark:hidden"
-                src="/images/logo/logo.svg"
-                alt="Logo"
+                src="/images/logo/auth-logo.png"
+                alt="EasyFeed"
                 width={150}
                 height={40}
               />
               <Image
                 className="hidden dark:block"
-                src="/images/logo/logo-dark.svg"
-                alt="Logo"
+                src="/images/logo/auth-logo.png"
+                alt="EasyFeed"
                 width={150}
                 height={40}
               />
-            </>
+            </div>
           ) : (
             <Image
               src="/images/logo/logo-icon.svg"
-              alt="Logo"
+              alt="EasyFeed"
               width={32}
               height={32}
             />

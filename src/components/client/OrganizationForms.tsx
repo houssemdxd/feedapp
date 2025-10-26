@@ -2,6 +2,7 @@
 
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "../ui/table";
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 
 export type OrganizationForm = {
   id: string;
@@ -31,14 +32,25 @@ export default function OrganizationFormsTable() {
     liquidGlassEffect: false,
   });
 
-  // Mock forms data
+  // Fetch forms data from API
   useEffect(() => {
-    const mockForms: OrganizationForm[] = [
-      { id: "1", title: "Formulaire d'inscription", addedAt: "2025-10-18T12:34:56Z" },
-      { id: "2", title: "Formulaire de feedback", addedAt: "2025-10-17T09:20:00Z" },
-      { id: "3", title: "Formulaire de contact", addedAt: "2025-10-16T15:45:00Z" },
-    ];
-    setForms(mockForms);
+    const load = async () => {
+      try {
+        const res = await fetch("/api/forms", { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to fetch forms");
+        const data: { id: string; title: string; createdAt?: string | null }[] = await res.json();
+        const mapped: OrganizationForm[] = data.map((f) => ({
+          id: f.id,
+          title: f.title,
+          addedAt: f.createdAt ?? new Date().toISOString(),
+        }));
+        setForms(mapped);
+      } catch (e) {
+        console.error(e);
+        setForms([]);
+      }
+    };
+    load();
   }, []);
 
   // Mock preferences fetch (ou remplacer par API fetch)
@@ -119,9 +131,11 @@ export default function OrganizationFormsTable() {
 
           <TableBody className="divide-y divide-gray-100 dark:divide-gray-800">
             {forms.map((form) => (
-              <TableRow key={form.id}>
+              <TableRow key={form.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
                 <TableCell className="py-3 pr-10">
-                  <div style={itemStyle} className="truncate">{form.title}</div>
+                  <Link href={`/organization/forms/${form.id}`} className="block">
+                    <div style={itemStyle} className="truncate cursor-pointer">{form.title}</div>
+                  </Link>
                 </TableCell>
                 <TableCell className="py-3">
                   <div style={itemStyle}>

@@ -1,25 +1,22 @@
-// models/FormTemplate.ts
-import mongoose, { Schema, Document, model, models } from "mongoose";
+import { Schema, model, models, type Model, type Types } from "mongoose";
 
-export interface IFormTemplate extends Document {
+export interface IFormTemplate {
+  _id?: Types.ObjectId;
   title: string;
-  type: "form" | "survey";
-  userId: mongoose.Types.ObjectId;
-  createdAt: Date;
+  userId?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const FormTemplateSchema = new Schema<IFormTemplate>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    title: { type: String, required: true },
-    type: { type: String, enum: ["form", "survey"], required: true },
+    title: { type: String, required: true, trim: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User" },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  { timestamps: true }
 );
 
-// Force Mongoose to use the new schema even if the model was already compiled
-const FormTemplateModel =
-  (models.FormTemplate as mongoose.Model<IFormTemplate>) ||
-  model<IFormTemplate>("FormTemplate", FormTemplateSchema);
+const FormTemplate: Model<IFormTemplate> =
+  models.FormTemplate || model<IFormTemplate>("FormTemplate", FormTemplateSchema);
 
-export default FormTemplateModel;
+export default FormTemplate;

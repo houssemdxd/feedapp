@@ -78,6 +78,7 @@ export async function middleware(req: NextRequest) {
   const user = await readUserFromJWT(req);
   const isAuthenticated = !!user?.userId;
   const role = user?.role;
+  const orgAccess = req.cookies.get("org_access")?.value;
 
   // 1) Guest-only: block authenticated users
   if (matchAny(pathname, GUEST_ONLY)) {
@@ -104,6 +105,10 @@ export async function middleware(req: NextRequest) {
 
   // 4) Organization-only
   if (matchAny(pathname, ORG_ONLY)) {
+    // Allow temporary access if user has org_access cookie (obtained via code/QR verification)
+    if (orgAccess) {
+      return NextResponse.next();
+    }
     if (!isAuthenticated) return redirectWithNext("/signin", req);
     if (role !== "organization") {
       return NextResponse.redirect(new URL(roleHome(role), req.url));
