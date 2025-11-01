@@ -21,6 +21,7 @@ export default function FormFill({ formId }: { formId: string }) {
   const [error, setError] = useState("");
   const [data, setData] = useState<FormDataPayload | null>(null);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -103,6 +104,28 @@ export default function FormFill({ formId }: { formId: string }) {
     });
   };
 
+  const suggestFor = async (q: Question) => {
+    try {
+      setAiLoading((s) => ({ ...s, [q.id]: true }));
+      const res = await fetch("/api/ai/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: q.question,
+          type: q.type,
+          context: { formTitle: data?.form.title, previousAnswers: answers },
+        }),
+      });
+      const json = await res.json();
+      const suggestion = (json?.suggestion || "").toString();
+      if (suggestion) onChange(q, suggestion);
+    } catch (e) {
+      // ignore
+    } finally {
+      setAiLoading((s) => ({ ...s, [q.id]: false }));
+    }
+  };
+
   const canSubmit = useMemo(() => {
     if (!data) return false;
     return data.questions.every((q) => {
@@ -170,13 +193,23 @@ export default function FormFill({ formId }: { formId: string }) {
           <div key={q.id} className="space-y-2">
             <div className="font-medium text-gray-900 dark:text-gray-100">{q.question}</div>
             {q.type === "input" && (
-              <input
-                type="text"
-                value={(answers[q.id] as string) || ""}
-                onChange={(e) => onChange(q, e.target.value)}
-                className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Votre réponse"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={(answers[q.id] as string) || ""}
+                  onChange={(e) => onChange(q, e.target.value)}
+                  className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Votre réponse"
+                />
+                <button
+                  type="button"
+                  className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  onClick={() => suggestFor(q)}
+                  disabled={!!aiLoading[q.id]}
+                >
+                  {aiLoading[q.id] ? "AI…" : "Suggest AI"}
+                </button>
+              </div>
             )}
             {q.type === "radio" && (
               <div className="flex flex-wrap gap-3">
@@ -194,12 +227,24 @@ export default function FormFill({ formId }: { formId: string }) {
               </div>
             )}
             {q.type === "textarea" && (
-              <textarea
-                value={(answers[q.id] as string) || ""}
-                onChange={(e) => onChange(q, e.target.value)}
-                className="w-full min-h-28 border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Votre réponse"
-              />
+              <div className="flex flex-col gap-2">
+                <textarea
+                  value={(answers[q.id] as string) || ""}
+                  onChange={(e) => onChange(q, e.target.value)}
+                  className="w-full min-h-28 border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Votre réponse"
+                />
+                <div>
+                  <button
+                    type="button"
+                    className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    onClick={() => suggestFor(q)}
+                    disabled={!!aiLoading[q.id]}
+                  >
+                    {aiLoading[q.id] ? "AI…" : "Suggest AI"}
+                  </button>
+                </div>
+              </div>
             )}
             {q.type === "slider" && (
               <div className="flex items-center gap-3">
@@ -287,13 +332,23 @@ export default function FormFill({ formId }: { formId: string }) {
               />
             )}
             {q.type === "email" && (
-              <input
-                type="email"
-                value={(answers[q.id] as string) || ""}
-                onChange={(e) => onChange(q, e.target.value)}
-                className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="email@example.com"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={(answers[q.id] as string) || ""}
+                  onChange={(e) => onChange(q, e.target.value)}
+                  className="w-full border rounded px-3 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="email@example.com"
+                />
+                <button
+                  type="button"
+                  className="px-3 py-2 text-sm rounded border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  onClick={() => suggestFor(q)}
+                  disabled={!!aiLoading[q.id]}
+                >
+                  {aiLoading[q.id] ? "AI…" : "Suggest AI"}
+                </button>
+              </div>
             )}
             {q.type === "number" && (
               <input
