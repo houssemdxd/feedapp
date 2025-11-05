@@ -49,11 +49,38 @@ export default function AdminPreviewPage() {
             console.log('Loading preferences - backgroundImage:', data.backgroundImage, 'selectedTemplate:', data.selectedTemplate);
 
             if (data.backgroundImage) {
-              // User has a custom background image
-              console.log('Setting custom background:', data.backgroundImage);
-              setBackgroundImage(data.backgroundImage);
-              // Clear template selection since custom image takes priority
-              setSelectedTemplate(-1);
+              // Check if the background image file actually exists
+              try {
+                const imageResponse = await fetch(data.backgroundImage, { method: 'HEAD' });
+                if (imageResponse.ok) {
+                  // Image exists, use it
+                  console.log('Setting custom background:', data.backgroundImage);
+                  setBackgroundImage(data.backgroundImage);
+                  // Clear template selection since custom image takes priority
+                  setSelectedTemplate(-1);
+                } else {
+                  // Image doesn't exist, clear it from preferences
+                  console.log('Background image not found, clearing from preferences');
+                  setBackgroundImage(null);
+                  setSelectedTemplate(0);
+                  // Update preferences to remove the missing image
+                  setPreferences(prev => ({
+                    ...prev,
+                    backgroundImage: null,
+                    selectedTemplate: 0
+                  }));
+                }
+              } catch (error) {
+                // Network error or other issue, clear the image
+                console.log('Error checking background image, clearing from preferences');
+                setBackgroundImage(null);
+                setSelectedTemplate(0);
+                setPreferences(prev => ({
+                  ...prev,
+                  backgroundImage: null,
+                  selectedTemplate: 0
+                }));
+              }
             } else if (data.selectedTemplate !== undefined && data.selectedTemplate >= 0) {
               // User has a template selected (no custom background)
               const templateIndex = data.selectedTemplate;
@@ -255,13 +282,121 @@ export default function AdminPreviewPage() {
     fileInputRef.current?.click();
   };
 
-  const handleSavePreferences = async () => {
-    if (!isAuthenticated) {
-      alert('You must be logged in to save preferences');
+  const handleAnalyzeLogo = async () => {
+    if (!preferences.logo) {
+      alert('Please upload a logo first');
       return;
     }
 
     try {
+      const response = await fetch('/api/analyze-logo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          logoPath: preferences.logo,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Update preferences with the analyzed colors
+        setPreferences(prev => ({
+          ...prev,
+          backgroundColor: result.analysis.primaryColors[0] || prev.backgroundColor,
+          appBarBackgroundColor: result.analysis.secondaryColors[0] || prev.appBarBackgroundColor,
+          organizationNameColor: result.analysis.primaryColors[1] || prev.organizationNameColor,
+          descriptionColor: result.analysis.secondaryColors[1] || prev.descriptionColor,
+          formItemBackgroundColor: result.analysis.accentColors[0] || prev.formItemBackgroundColor,
+          formTitleColor: result.analysis.primaryColors[2] || prev.formTitleColor,
+          formItemTextColor: result.analysis.neutralColors[0] || prev.formItemTextColor,
+        }));
+
+        alert('✅ Logo analyzed successfully! Colors have been applied to your template.');
+      } else {
+        alert(`Failed to analyze logo: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error analyzing logo:', error);
+      alert('Error analyzing logo. Please try again.');
+    }
+  };
+
+  const handleDeleteBackgroundImage = async () => {
+    if (!backgroundImage || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/background-images?path=${encodeURIComponent(backgroundImage)}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Clear the background image from state and preferences
+        setBackgroundImage(null);
+        setPreferences(prev => ({
+          ...prev,
+          backgroundImage: null,
+          selectedTemplate: 0 // Reset to default template
+        }));
+        setSelectedTemplate(0);
+      } else {
+        alert(`Failed to delete background image: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting background image:', error);
+      alert('Error deleting background image. Please try again.');
+    }
+  };
+
+  const handleDeleteBackgroundImageFromGallery = async (imagePath: string) => {
+    if (!isAuthenticated) {
+      alert('You must be authenticated to delete background images');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/background-images?path=${encodeURIComponent(imagePath)}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // If the deleted image was currently selected, clear it from the preview
+        if (backgroundImage === imagePath) {
+          setBackgroundImage(null);
+          setPreferences(prev => ({
+            ...prev,
+            backgroundImage: null,
+            selectedTemplate: 0 // Reset to default template
+          }));
+          setSelectedTemplate(0);
+        }
+        alert('✅ Background image deleted successfully!');
+      } else {
+        alert(`Failed to delete background image: ${result.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting background image:', error);
+      alert('Error deleting background image. Please try again.');
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    if (!isAuthenticated) {
+      alert('You must be authenticated to save preferences');
+      return;
+    }
+
+    try {
+      console.log('Saving preferences...', preferences);
+
       const response = await fetch('/api/preferences', {
         method: 'POST',
         headers: {
@@ -272,106 +407,27 @@ export default function AdminPreviewPage() {
 
       const result = await response.json();
 
-      if (response.ok) {
-        const action = result.action || 'saved';
-        let message = `✅ Preferences ${action} successfully!\n\n`;
-
-        // If an access code was generated, show it prominently
-        if (result.accessCode) {
-          message += `🔑 ACCESS CODE: ${result.accessCode}\n\n`;
-          message += `⚠️  IMPORTANT: Save this code!\n`;
-          message += `You'll need it to access your organization.\n\n`;
-          message += `Code: ${result.accessCode}`;
-        } else {
-          message += `Your preferences have been saved.`;
-        }
-
-        alert(message);
-        console.log('Access code displayed:', result.accessCode);
+      if (response.ok && result.success) {
+        alert('✅ Preferences saved successfully!');
       } else {
         alert(`Failed to save preferences: ${result.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
-      alert('Error saving preferences');
+      alert('Error saving preferences. Please try again.');
     }
   };
 
-  // Fetch preferences from API or database
-  useEffect(() => {
-    const fetchPreferences = async () => {
-      try {
-        console.log('Fetching preferences...');
-        const response = await fetch('/api/preferences');
-        console.log('API response status:', response.status);
-
-        if (response.ok) {
-          // User is authenticated since API call succeeded
-          console.log('User is authenticated, loading preferences...');
-
-          try {
-            const data = await response.json();
-            console.log('Loaded preferences:', data);
-
-            setPreferences(data);
-            console.log('Loading preferences - backgroundImage:', data.backgroundImage, 'selectedTemplate:', data.selectedTemplate);
-
-            if (data.backgroundImage) {
-              // User has a custom background image
-              console.log('Setting custom background:', data.backgroundImage);
-              setBackgroundImage(data.backgroundImage);
-              // Clear template selection since custom image takes priority
-              setSelectedTemplate(-1);
-            } else if (data.selectedTemplate !== undefined && data.selectedTemplate >= 0) {
-              // User has a template selected (no custom background)
-              const templateIndex = data.selectedTemplate;
-              console.log('Setting template background:', templateIndex, templates[templateIndex]?.backgroundImage);
-              setSelectedTemplate(templateIndex);
-              setBackgroundImage(templates[templateIndex]?.backgroundImage || null);
-            } else {
-              // Default case - no custom background, no template
-              console.log('Setting default background');
-              setBackgroundImage(null);
-              setSelectedTemplate(0); // Default to first template
-            }
-            setIsAuthenticated(true);
-          } catch (jsonError) {
-            console.error('Error parsing preferences JSON:', jsonError);
-            setIsAuthenticated(false);
-          }
-        } else if (response.status === 401) {
-          // User not authenticated, use default preferences
-          console.log('User not authenticated, using default preferences');
-          setIsAuthenticated(false);
-        } else {
-          console.error('Failed to load preferences:', response.statusText);
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error('Error fetching preferences:', error);
-        // Use default preferences if API call fails
-        setIsAuthenticated(false);
-      }
-    };
-
-    fetchPreferences();
-  }, []);
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleBackgroundImageChange}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
       <div className="flex flex-col md:flex-row md:space-x-6 space-y-6">
-        {/* Top Bar */}
-
-
-        {/* Hidden file input for background image */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleBackgroundImageChange}
-          className="hidden"
-        />
-
         {/* Preview */}
         <div className="w-full md:w-2/3 flex justify-center">
           {/* iPhone Frame */}
@@ -488,50 +544,14 @@ export default function AdminPreviewPage() {
             {/* Home Indicator */}
             <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gray-300 rounded-full"></div>
             {/* Side Buttons */}
-            {/* Volume Up */}
             <div className="absolute -left-1 top-24 w-1 h-6 bg-gray-600 rounded-l"></div>
-            {/* Volume Down */}
             <div className="absolute -left-1 top-32 w-1 h-6 bg-gray-600 rounded-l"></div>
-            {/* Power Button */}
             <div className="absolute -right-1 top-28 w-1 h-8 bg-gray-600 rounded-r"></div>
-          </div>
-        </div>
-
-        {/* Template Carousel - Mobile Only */}
-        <div className="md:hidden w-full">
-          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white text-center">Choose Template</h3>
-          <div className="flex space-x-3 overflow-x-auto pb-4 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {templates.map((template, index) => (
-              <div
-                key={index}
-                onClick={() => applyTemplate(index)}
-                className={`flex-shrink-0 w-16 h-24 sm:w-20 sm:h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${selectedTemplate === index ? 'border-blue-500 shadow-lg' : 'border-gray-300'}`}
-                style={{
-                  backgroundColor: template.backgroundColor,
-                  backgroundImage: template.backgroundImage ? `url(${template.backgroundImage})` : 'none',
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              >
-                {/* Small App Bar */}
-                <div className="h-5 sm:h-6 bg-gray-100 dark:bg-gray-800 rounded-t-xl flex items-center justify-between px-1">
-                  <div className="w-6 sm:w-8 h-1.5 sm:h-2 bg-gray-300 rounded"></div>
-                  <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-gray-300 rounded-full"></div>
-                </div>
-                {/* Small Content */}
-                <div className="h-16 sm:h-18 p-1 flex flex-col justify-between">
-                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
-                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
-                  <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded"></div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 
         {/* Controls */}
         <div className="w-full p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Customize Preview</h2>
             <div className="flex space-x-2">
@@ -580,6 +600,24 @@ export default function AdminPreviewPage() {
             </p>
           </div>
 
+          {/* Logo Analysis Button */}
+          {preferences.logo && (
+            <div className="mb-4">
+              <button
+                onClick={handleAnalyzeLogo}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-md flex items-center justify-center space-x-2 text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <span>Analyze Logo Colors</span>
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Use AI to extract colors from your logo and apply them to the template
+              </p>
+            </div>
+          )}
+
           {/* Background Gallery */}
           <BackgroundGallery
             onSelectBackground={(path) => {
@@ -591,6 +629,10 @@ export default function AdminPreviewPage() {
                 selectedTemplate: -1
               }));
               setSelectedTemplate(-1);
+            }}
+            onDeleteBackground={(path) => {
+              console.log('Deleting background from gallery:', path);
+              handleDeleteBackgroundImageFromGallery(path);
             }}
             currentBackground={backgroundImage}
           />
@@ -628,6 +670,39 @@ export default function AdminPreviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Template Carousel - Mobile Only */}
+      <div className="md:hidden w-full mt-6">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white text-center">Choose Template</h3>
+        <div className="flex space-x-3 overflow-x-auto pb-4 px-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {templates.map((template, index) => (
+            <div
+              key={index}
+              onClick={() => applyTemplate(index)}
+              className={`flex-shrink-0 w-16 h-24 sm:w-20 sm:h-28 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${selectedTemplate === index ? 'border-blue-500 shadow-lg' : 'border-gray-300'}`}
+              style={{
+                backgroundColor: template.backgroundColor,
+                backgroundImage: template.backgroundImage ? `url(${template.backgroundImage})` : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              {/* Small App Bar */}
+              <div className="h-5 sm:h-6 bg-gray-100 dark:bg-gray-800 rounded-t-xl flex items-center justify-between px-1">
+                <div className="w-6 sm:w-8 h-1.5 sm:h-2 bg-gray-300 rounded"></div>
+                <div className="w-1.5 sm:w-2 h-1.5 sm:h-2 bg-gray-300 rounded-full"></div>
+              </div>
+              {/* Small Content */}
+              <div className="h-16 sm:h-18 p-1 flex flex-col justify-between">
+                <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
+                <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded mb-1"></div>
+                <div className="h-1.5 sm:h-2 bg-white dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Color Picker Tooltip */}
       {selectedElement && (
         <div className="absolute bg-white dark:bg-gray-800 border border-gray-300 rounded-lg shadow-lg p-4 z-50" style={{ top: palettePosition.top, left: palettePosition.left }}>
@@ -654,6 +729,7 @@ export default function AdminPreviewPage() {
           </div>
         </div>
       )}
+
       <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 text-center">
         This is a preview of how the preferences will appear on mobile devices.
       </p>
