@@ -14,7 +14,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (!process.env.GOOGLE_GEMINI_API_KEY) {
-      return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Gemini API key not configured',
+        message: 'Please set GOOGLE_GEMINI_API_KEY in your .env file. Get your API key from https://makersuite.google.com/app/apikey'
+      }, { status: 500 });
+    }
+
+    // Verify API key format (starts with AIza)
+    if (!process.env.GOOGLE_GEMINI_API_KEY.startsWith('AIza')) {
+      console.warn('API key format might be incorrect. Gemini API keys typically start with "AIza"');
     }
 
     // Read the logo file
@@ -25,46 +33,31 @@ export async function POST(request: NextRequest) {
     const base64Image = imageBuffer.toString('base64');
     const mimeType = logoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-    // Try multiple model names as fallbacks
-    let model;
-    let selectedModelName = '';
-    const modelNames = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro'];
-    
-    for (const modelName of modelNames) {
-      try {
-        model = genAI.getGenerativeModel({ model: modelName });
-        selectedModelName = modelName;
-        console.log(`Successfully loaded model: ${modelName}`);
-        break;
-      } catch (error) {
-        console.log(`Model ${modelName} not available, trying next...`);
-        continue;
-      }
-    }
-    
-    if (!model) {
-      console.log('No Gemini models available, using fallback color generation');
-      // Return a mock response for testing
-      return NextResponse.json({
-        success: true,
-        analysis: {
-          primaryColors: ['#3B82F6', '#10B981', '#F59E0B'],
-          secondaryColors: ['#6B7280', '#9CA3AF', '#D1D5DB'],
-          accentColors: ['#EF4444', '#8B5CF6'],
-          neutralColors: ['#F9FAFB', '#F3F4F6', '#E5E7EB'],
-          fontSuggestions: {
-            heading: ['Inter', 'Roboto', 'Poppins'],
-            body: ['Open Sans', 'Lato', 'Source Sans Pro'],
-            accent: ['Playfair Display', 'Montserrat', 'Raleway']
-          },
-          colorScheme: 'vibrant',
-          brandPersonality: 'modern'
-        },
-        fallback: true
-      });
+    // Try to list available models first (if API supports it)
+    let availableModels: string[] = [];
+    try {
+      // Note: The SDK might not expose listModels directly, so we'll try models in order
+      console.log('Attempting to use Gemini models...');
+    } catch (error) {
+      console.log('Could not list models, will try direct model access');
     }
 
-    console.log(`Using Gemini model: ${selectedModelName}`);
+    // Try multiple model names as fallbacks (vision-capable models)
+    // Updated to include latest model names and variations
+    let model;
+    let selectedModelName = '';
+    // Try different model name formats - prioritize newer models first
+    const modelNames = [
+      'gemini-2.0-flash-exp',
+      'gemini-2.0-flash-thinking-exp-001',
+      'gemini-1.5-flash-8b',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-pro-vision',
+      'gemini-pro'
+    ];
 
     const prompt = `
       Analyze this logo image and extract a comprehensive color palette and suggest appropriate fonts.
@@ -100,22 +93,80 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    const result = await model.generateContent([prompt, imagePart]);
-    const response = await result.response;
-    const text = response.text();
+    // Try each model until one works
+    let lastError: any = null;
+    for (const modelName of modelNames) {
+      try {
+        model = genAI.getGenerativeModel({ model: modelName });
+        selectedModelName = modelName;
+        console.log(`Trying Gemini model: ${modelName}`);
+        
+        const result = await model.generateContent([prompt, imagePart]);
+        const response = await result.response;
+        const text = response.text();
 
-    // Try to parse the JSON response
-    let analysisResult;
-    try {
-      analysisResult = JSON.parse(text);
-    } catch (parseError) {
-      console.error('Failed to parse Gemini response:', text);
-      return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
+        // Try to parse the JSON response
+        let analysisResult;
+        try {
+          analysisResult = JSON.parse(text);
+        } catch (parseError) {
+          console.error('Failed to parse Gemini response:', text);
+          // If parsing fails, extract JSON from the response text
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            analysisResult = JSON.parse(jsonMatch[0]);
+          } else {
+            throw new Error('No valid JSON found in response');
+          }
+        }
+
+        console.log(`Successfully analyzed logo with ${modelName}`);
+        return NextResponse.json({
+          success: true,
+          analysis: analysisResult,
+        });
+      } catch (error: any) {
+        console.log(`Model ${modelName} failed:`, error.message);
+        lastError = error;
+        // Continue to next model
+        continue;
+      }
     }
-
+    
+    // If all models failed, use fallback with helpful error message
+    console.log('All Gemini models failed, using fallback color generation');
+    console.log('Last error:', lastError?.message);
+    
+    const errorMessage = lastError?.message || 'All models failed';
+    const is404Error = errorMessage.includes('404') || errorMessage.includes('not found');
+    
     return NextResponse.json({
       success: true,
-      analysis: analysisResult,
+      analysis: {
+        primaryColors: ['#3B82F6', '#10B981', '#F59E0B'],
+        secondaryColors: ['#6B7280', '#9CA3AF', '#D1D5DB'],
+        accentColors: ['#EF4444', '#8B5CF6'],
+        neutralColors: ['#F9FAFB', '#F3F4F6', '#E5E7EB'],
+        fontSuggestions: {
+          heading: ['Inter', 'Roboto', 'Poppins'],
+          body: ['Open Sans', 'Lato', 'Source Sans Pro'],
+          accent: ['Playfair Display', 'Montserrat', 'Raleway']
+        },
+        colorScheme: 'vibrant',
+        brandPersonality: 'modern'
+      },
+      fallback: true,
+      error: errorMessage,
+      troubleshooting: is404Error ? {
+        message: 'Gemini API models not found. This usually means:',
+        steps: [
+          '1. Verify your API key is valid and has access to Gemini API',
+          '2. Enable the Gemini API in Google Cloud Console',
+          '3. Check that your API key has the necessary permissions',
+          '4. Visit https://ai.google.dev/gemini-api/docs/models to see available models',
+          '5. You may need to create a new API key or enable billing for some models'
+        ]
+      } : undefined
     });
 
   } catch (error) {
