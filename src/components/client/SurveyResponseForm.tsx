@@ -85,7 +85,7 @@ export default function SurveyResponseForm({
     for (const question of survey.questions) {
       const value = answers[question.id];
       if (question.required !== false && isEmpty(value)) {
-        return `Merci de compléter la question "${question.label}".`;
+        return `Please complete the question "${question.label}".`;
       }
     }
     return null;
@@ -117,7 +117,7 @@ export default function SurveyResponseForm({
 
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || "Impossible d'enregistrer votre réponse.");
+        setError(data.error || "Unable to save your response.");
         return;
       }
 
@@ -128,7 +128,7 @@ export default function SurveyResponseForm({
       }
     } catch (submissionError: any) {
       console.error("Survey submission failed:", submissionError);
-      setError("Une erreur inattendue est survenue. Veuillez réessayer.");
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -146,13 +146,13 @@ export default function SurveyResponseForm({
           </p>
         )}
         <p className="mt-2 text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-          Code d&apos;accès&nbsp;: {survey.accessCode}
+          Access code: {survey.accessCode}
         </p>
       </div>
 
       {survey.questions.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-5 text-sm text-gray-600 shadow dark:border-gray-700 dark:bg-white/5 dark:text-gray-300">
-          Ce sondage ne contient pas de questions configurées pour le moment.
+          This survey does not contain any configured questions yet.
         </div>
       ) : (
         <div className="space-y-5">
@@ -183,7 +183,7 @@ export default function SurveyResponseForm({
                     handleChange(question, event.target.value)
                   }
                   className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.08] dark:text-white"
-                  placeholder="Votre réponse..."
+                  placeholder="Your answer..."
                 />
               )}
 
@@ -195,7 +195,7 @@ export default function SurveyResponseForm({
                     handleChange(question, event.target.value)
                   }
                   className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.08] dark:text-white"
-                  placeholder="Décrivez votre expérience..."
+                  placeholder="Share your experience..."
                 />
               )}
 
@@ -271,7 +271,7 @@ export default function SurveyResponseForm({
                     <span>{question.max ?? 5}</span>
                   </div>
                   <div className="text-sm font-semibold text-brand-600 dark:text-brand-400">
-                    Score&nbsp;:{" "}
+                    Score:{" "}
                     {typeof answers[question.id] === "number"
                       ? answers[question.id]
                       : question.max ?? 5}
@@ -292,13 +292,13 @@ export default function SurveyResponseForm({
 
       {success && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
-          Merci pour votre participation ! Vos réponses ont bien été enregistrées.
+          Thank you for participating! Your responses have been recorded.
         </div>
       )}
 
       <div className="flex justify-end">
         <Button type="submit" disabled={submitting || survey.questions.length === 0}>
-          {submitting ? "Envoi en cours..." : "Envoyer mes réponses"}
+          {submitting ? "Submitting..." : "Submit responses"}
         </Button>
       </div>
     </form>

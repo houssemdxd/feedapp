@@ -19,6 +19,17 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
+type QuestionStat = {
+  id: string;
+  label: string;
+  type: string;
+  totalAnswers: number;
+  optionCounts?: { option: string; count: number }[];
+  ratingDistribution?: { value: number; count: number }[];
+  averageRating?: number;
+  textResponses?: number;
+};
+
 type EngagementAsset = {
   id: string;
   title: string;
@@ -28,6 +39,7 @@ type EngagementAsset = {
   lastUpdated: string;
   accessCode?: string;
   distributionChannel?: string;
+  questionStats?: QuestionStat[];
 };
 
 type AnalyticsSummary = {
@@ -43,6 +55,8 @@ export default function FormsDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [showStatistics, setShowStatistics] = useState(false);
   const [statisticsCleared, setStatisticsCleared] = useState(false);
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -75,6 +89,48 @@ export default function FormsDashboardPage() {
 
   const assets = analytics?.assets ?? [];
   const totals = analytics?.totals ?? { Form: 0, Survey: 0, Post: 0 };
+
+  useEffect(() => {
+    if (!analytics) {
+      setSelectedSurveyId(null);
+      setSelectedQuestionId(null);
+      return;
+    }
+
+    if (assets.length === 0) {
+      setSelectedSurveyId(null);
+      setSelectedQuestionId(null);
+      return;
+    }
+
+    if (!selectedSurveyId || !assets.some((asset) => asset.id === selectedSurveyId)) {
+      setSelectedSurveyId(assets[0].id);
+      const defaultQuestion =
+        assets[0].questionStats?.find(
+          (question) =>
+            (question.optionCounts && question.optionCounts.length > 0) ||
+            (question.ratingDistribution && question.ratingDistribution.length > 0)
+        ) ?? assets[0].questionStats?.[0];
+      setSelectedQuestionId(defaultQuestion?.id ?? null);
+      return;
+    }
+
+    const currentSurvey = assets.find((asset) => asset.id === selectedSurveyId);
+    if (currentSurvey) {
+      if (
+        !selectedQuestionId ||
+        !currentSurvey.questionStats?.some((question) => question.id === selectedQuestionId)
+      ) {
+        const defaultQuestion =
+          currentSurvey.questionStats?.find(
+            (question) =>
+              (question.optionCounts && question.optionCounts.length > 0) ||
+              (question.ratingDistribution && question.ratingDistribution.length > 0)
+          ) ?? currentSurvey.questionStats?.[0];
+        setSelectedQuestionId(defaultQuestion?.id ?? null);
+      }
+    }
+  }, [analytics, assets, selectedSurveyId, selectedQuestionId]);
 
   const totalResponses = useMemo(
     () => assets.reduce((sum, asset) => sum + asset.responses, 0),
@@ -131,6 +187,125 @@ export default function FormsDashboardPage() {
     setShowStatistics(false);
   };
 
+  const selectedSurvey = useMemo(
+    () => assets.find((asset) => asset.id === selectedSurveyId) ?? null,
+    [assets, selectedSurveyId]
+  );
+
+  const selectedQuestion = useMemo(() => {
+    if (!selectedSurvey || !selectedQuestionId) return null;
+    return (
+      selectedSurvey.questionStats?.find(
+        (question) => question.id === selectedQuestionId
+      ) ?? null
+    );
+  }, [selectedSurvey, selectedQuestionId]);
+
+  const questionChart = useMemo(() => {
+    if (!selectedQuestion) return null;
+
+    if (
+      selectedQuestion.optionCounts &&
+      selectedQuestion.optionCounts.length > 0
+    ) {
+      const total = selectedQuestion.optionCounts.reduce(
+        (sum, entry) => sum + entry.count,
+        0
+      );
+
+      const series = selectedQuestion.optionCounts.map((entry) => entry.count);
+      const labels = selectedQuestion.optionCounts.map((entry) => entry.option);
+
+      const options: ApexOptions = {
+        chart: { type: "donut", fontFamily: "Outfit, sans-serif" },
+        labels,
+        colors: ["#4f46e5", "#10b981", "#f59e0b", "#ef4444", "#6366f1", "#14b8a6"],
+        dataLabels: {
+          enabled: true,
+          formatter(val: number) {
+            return `${val.toFixed(1)}%`;
+          },
+        },
+        legend: {
+          position: "bottom",
+          formatter(seriesName, opts) {
+            const count = opts.w.globals.series[opts.seriesIndex];
+            const pct = total > 0 ? ((count / total) * 100).toFixed(0) : "0";
+            return `${seriesName}: ${count} (${pct}%)`;
+          },
+        },
+        tooltip: {
+          y: {
+            formatter(value: number) {
+              const pct = total > 0 ? ((value / total) * 100).toFixed(1) : "0.0";
+              return `${value} responses (${pct}%)`;
+            },
+          },
+        },
+        stroke: { width: 0 },
+      };
+
+      const summary =
+        total > 0
+          ? selectedQuestion.optionCounts
+              .map((entry) => {
+                const pct = ((entry.count / total) * 100).toFixed(1);
+                return `${entry.option}: ${entry.count} (${pct}%)`;
+              })
+              .join(" • ")
+          : "No responses recorded yet.";
+
+      return {
+        series,
+        options,
+        summary,
+        chartType: "donut" as const,
+      };
+    }
+
+    if (
+      selectedQuestion.ratingDistribution &&
+      selectedQuestion.ratingDistribution.length > 0
+    ) {
+      const categories = selectedQuestion.ratingDistribution.map((entry) =>
+        entry.value.toString()
+      );
+      const series = [
+        {
+          name: "Responses",
+          data: selectedQuestion.ratingDistribution.map((entry) => entry.count),
+        },
+      ];
+
+      const options: ApexOptions = {
+        chart: { type: "bar", fontFamily: "Outfit, sans-serif" },
+        plotOptions: { bar: { horizontal: false, columnWidth: "45%" } },
+        dataLabels: { enabled: false },
+        xaxis: { categories, title: { text: "Rating" } },
+        colors: ["#f97316"],
+        yaxis: { title: { text: "Responses" } },
+      };
+
+      const summary =
+        selectedQuestion.averageRating !== undefined
+          ? `Average rating: ${selectedQuestion.averageRating}`
+          : null;
+
+      return { series, options, summary, chartType: "bar" as const };
+    }
+
+    if (selectedQuestion.textResponses !== undefined) {
+      return {
+        series: null,
+        options: null,
+        summary: `Collected ${selectedQuestion.textResponses} text responses.`,
+        chartType: null,
+      };
+    }
+
+    return null;
+  }, [selectedQuestion]);
+
   return (
     <div className="space-y-6">
       <PageBreadcrumb pageTitle="Forms Dashboard" />
@@ -162,29 +337,28 @@ export default function FormsDashboardPage() {
               Active Engagement Assets
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Gardez un aperçu centralisé de vos formulaires, sondages et posts.
+              Keep a consolidated view of your forms, surveys, and posts.
             </p>
             {analytics?.lastActivity && (
               <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                Dernière activité&nbsp;:
-                {" "}
-                {new Date(analytics.lastActivity).toLocaleString("fr-FR")}
+                Last activity:{" "}
+                {new Date(analytics.lastActivity).toLocaleString("en-US")}
               </p>
             )}
           </div>
           <div className="flex flex-wrap gap-3 text-sm">
             <span className="rounded-full bg-brand-50 px-3 py-1 font-medium text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-              {assets.length} éléments
+              {assets.length} items
             </span>
             <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-600 dark:bg-white/10 dark:text-gray-300">
-              {totalResponses} réponses collectées
+              {totalResponses} total responses
             </span>
           </div>
         </div>
 
         {loading ? (
           <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-            Chargement des analytics...
+            Loading analytics...
           </div>
         ) : error ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
@@ -192,8 +366,8 @@ export default function FormsDashboardPage() {
           </div>
         ) : assets.length === 0 ? (
           <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
-            Aucun formulaire ou sondage n&apos;a encore collecté de réponses.
-            Publiez un nouveau sondage pour commencer à recevoir des insights.
+            No form or survey has collected responses yet. Publish a new survey to
+            start gathering insights.
           </div>
         ) : (
           <div className="max-w-full overflow-x-auto">
@@ -282,7 +456,7 @@ export default function FormsDashboardPage() {
                       {asset.distributionChannel ?? "In-app"}
                     </TableCell>
                     <TableCell className="py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(asset.lastUpdated).toLocaleString("fr-FR")}
+                      {new Date(asset.lastUpdated).toLocaleString("en-US")}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -296,10 +470,10 @@ export default function FormsDashboardPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
             <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
-              Répartition des réponses
+              Response distribution
             </h4>
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Visualisez le volume des réponses selon le type de contenu partagé.
+              Visualize how responses are distributed across your engagement types.
             </p>
             <ReactApexChart
               options={chartOptions}
@@ -311,11 +485,10 @@ export default function FormsDashboardPage() {
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]">
             <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
-              Indicateurs de performance
+              Top performing experiences
             </h4>
             <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Les meilleurs taux de complétion vous permettent d&apos;identifier
-              les expériences les plus engageantes.
+              Highest completion rates highlight your most engaging experiences.
             </p>
             <ul className="space-y-4">
               {assets
@@ -345,10 +518,79 @@ export default function FormsDashboardPage() {
         </div>
       )}
 
+      {showStatistics && !statisticsCleared && selectedSurvey && selectedQuestion && (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03] space-y-6">
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[220px]">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-white/80">
+                Survey
+              </label>
+              <select
+                value={selectedSurveyId ?? ""}
+                onChange={(event) => setSelectedSurveyId(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.04] dark:text-white"
+              >
+                {assets.map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex-1 min-w-[220px]">
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-white/80">
+                Question
+              </label>
+              <select
+                value={selectedQuestionId ?? ""}
+                onChange={(event) => setSelectedQuestionId(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.04] dark:text-white"
+              >
+                {(selectedSurvey.questionStats ?? []).map((question) => (
+                  <option key={question.id} value={question.id}>
+                    {question.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
+                {selectedQuestion.label}
+              </h4>
+              <p className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                Type: {selectedQuestion.type} • {selectedQuestion.totalAnswers} answers
+              </p>
+            </div>
+
+            {questionChart?.series && questionChart.options ? (
+              <ReactApexChart
+                options={questionChart.options}
+                series={questionChart.series}
+                type={questionChart.chartType ?? "bar"}
+                height={320}
+              />
+            ) : !questionChart?.summary ? (
+              <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-600 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300">
+                Not enough structured data to build a chart for this question yet.
+              </div>
+            ) : null}
+
+            {questionChart?.summary && (
+              <div className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-700 dark:bg-brand-500/10 dark:text-brand-200">
+                {questionChart.summary}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {statisticsCleared && (
         <div className="rounded-2xl border border-dashed border-error-200 bg-error-50/80 p-6 text-sm text-error-700 dark:border-error-500/40 dark:bg-error-500/10 dark:text-error-200">
-          Les statistiques ont été supprimées. Relancez une nouvelle collecte
-          pour générer des insights mis à jour.
+          Statistics cleared. Launch a new collection to generate updated insights.
         </div>
       )}
     </div>

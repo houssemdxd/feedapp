@@ -36,7 +36,7 @@ export default function ClientDashboard() {
     async (code: string) => {
       const normalized = code.trim().toUpperCase();
       if (!normalized) {
-        setLookupError("Renseignez un code d'accès.");
+        setLookupError("Please enter an access code.");
         return;
       }
 
@@ -51,7 +51,7 @@ export default function ClientDashboard() {
 
         if (!response.ok) {
           setStatus("error");
-          setLookupError(data.error || "Ce code ne correspond à aucun sondage.");
+          setLookupError(data.error || "No survey matches this access code.");
           setCurrentSurvey(null);
           return;
         }
@@ -69,7 +69,7 @@ export default function ClientDashboard() {
         console.error("Failed to load survey:", error);
         setStatus("error");
         setLookupError(
-          "Impossible de charger ce sondage pour le moment. Réessayez plus tard."
+          "Unable to load this survey right now. Please try again later."
         );
         setCurrentSurvey(null);
       }
@@ -99,25 +99,25 @@ export default function ClientDashboard() {
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                  Participer à un sondage
+                  Participate in a survey
                 </h2>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                  Entrez le code d&apos;accès partagé par l&apos;organisation ou
-                  scannez le QR code depuis votre appareil mobile.
+                  Enter the access code provided by the organization or scan the QR
+                  code from your device.
                 </p>
               </div>
 
               <form className="space-y-4" onSubmit={handleSubmitCode}>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-white/90">
-                    Code d&apos;accès
+                    Access code
                   </label>
                   <input
                     value={accessCode}
                     onChange={(event) =>
                       setAccessCode(event.target.value.toUpperCase())
                     }
-                    placeholder="Ex: SURV01"
+                    placeholder="e.g. SURV01"
                     maxLength={10}
                     className="w-full uppercase rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.04] dark:text-white"
                   />
@@ -131,9 +131,7 @@ export default function ClientDashboard() {
 
                 <div className="flex flex-wrap items-center gap-3">
                   <Button type="submit" disabled={status === "loading"}>
-                    {status === "loading"
-                      ? "Recherche en cours..."
-                      : "Trouver le sondage"}
+                    {status === "loading" ? "Searching..." : "Find survey"}
                   </Button>
                   <Button
                     type="button"
@@ -141,14 +139,13 @@ export default function ClientDashboard() {
                     onClick={resetState}
                     disabled={status === "loading" && !lookupError}
                   >
-                    Réinitialiser
+                    Reset
                   </Button>
                 </div>
               </form>
 
               <div className="rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">
-                Conseil&nbsp;: Vous pouvez aussi scanner un QR code depuis votre
-                mobile pour pré-remplir automatiquement le code.
+                Tip: You can also scan a QR code to autofill the code on mobile.
               </div>
             </div>
           ) : (
@@ -156,16 +153,16 @@ export default function ClientDashboard() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    Répondre au sondage
+                    Fill out the survey
                   </h2>
                   {hasSubmitted && (
                     <p className="mt-1 text-xs font-medium uppercase text-emerald-600 dark:text-emerald-400">
-                      Réponse envoyée — merci pour votre participation.
+                      Response submitted — thank you for participating.
                     </p>
                   )}
                 </div>
                 <Button variant="outline" onClick={resetState}>
-                  Utiliser un autre code
+                  Use another code
                 </Button>
               </div>
 
