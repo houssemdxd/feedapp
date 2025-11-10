@@ -62,24 +62,71 @@
 import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
-// import jwt from "jsonwebtoken";
 import { signAccessToken } from "@/lib/jwt";
 import { setSessionCookie } from "@/lib/cookies";
 
+function buildJsonResponse(body, init = {}) {
+  return new Response(JSON.stringify(body), {
+    headers: { "Content-Type": "application/json" },
+    ...init,
+  });
+}
 
 export async function POST(req) {
   await connectDB();
-  const { email, password } = await req.json();
 
-  const user = await User.findOne({ email });
-  if (!user) return new Response(JSON.stringify({ error: "Invalid email or password" }), { status: 401 });
+  try {
+    const { email, password } = await req.json();
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return new Response(JSON.stringify({ error: "Invalid email or password" }), { status: 401 });
+    if (!email || !password) {
+      return buildJsonResponse(
+        { error: "Email and password are required" },
+        { status: 400 }
+      );
+    }
 
-  //const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  const token = signAccessToken({ userId: String(user._id) });
-  await setSessionCookie(token);
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
-  return new Response(JSON.stringify({ token }), { status: 200 });
+    if (!user) {
+      return buildJsonResponse(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return buildJsonResponse(
+        { error: "Invalid email or password" },
+        { status: 401 }
+      );
+    }
+
+    const role = user.role ?? "client";
+    const token = signAccessToken({
+      userId: String(user._id),
+      role,
+    });
+
+    await setSessionCookie(token);
+
+    return buildJsonResponse({
+      token,
+      user: {
+        id: String(user._id),
+        email: user.email,
+        fname: user.fname ?? "",
+        lname: user.lname ?? "",
+        role,
+      },
+      redirect: role === "organization" ? "/admin/builder" : "/client",
+    });
+  } catch (error) {
+    console.error("POST /api/auth/login error:", error);
+    return buildJsonResponse(
+      { error: "Something went wrong" },
+      { status: 500 }
+    );
+  }
 }

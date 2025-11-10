@@ -11,6 +11,20 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import LoginAlerts from "./LoginAlerts";
 
+type LoginResponse = {
+  token?: string;
+  user?: {
+    id?: string;
+    email?: string;
+    fname?: string;
+    lname?: string;
+    role?: "client" | "organization" | string;
+  };
+  redirect?: string;
+  error?: string;
+  message?: string;
+};
+
 export default function SignInForm() {
   const [note, setNote] = useState<string | null>(null);
 
@@ -44,16 +58,34 @@ export default function SignInForm() {
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      const data: LoginResponse = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Login failed");
+        setError(data.error || data.message || "Login failed");
         return;
       }
 
       alert("✅ Login successful!");
-      // Redirect to dashboard
-      router.push("/client");
+      const nextParam = sp.get("next");
+      const safeNext =
+        nextParam && nextParam.startsWith("/") ? nextParam : null;
+
+      const role = data.user?.role;
+      const fallbackRedirect =
+        role === "organization"
+          ? "/admin/builder"
+          : role === "client"
+            ? "/client"
+            : null;
+
+      const destination =
+        (data.redirect && data.redirect.startsWith("/")
+          ? data.redirect
+          : fallbackRedirect) ??
+        safeNext ??
+        "/client";
+
+      router.push(destination);
     } catch (err) {
       setError("Something went wrong. Try again later.");
     }
