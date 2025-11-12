@@ -2,8 +2,8 @@
 import React from "react";
 
 interface NavbarProps {
-  activeTab: "form" | "sondage" | "post";
-  setActiveTab: (tab: "form" | "sondage" | "post") => void;
+  activeTab: "form" | "sondage" /* "post"*/;
+  setActiveTab: (tab: "form" | "sondage" /* "post"*/) => void;
 }
 
 export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
@@ -29,6 +29,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
       >
         Surveys
       </button>
+      {/*
       <button
         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
           activeTab === "post"
@@ -39,6 +40,7 @@ export default function Navbar({ activeTab, setActiveTab }: NavbarProps) {
       >
         Post
       </button>
+      */}
     </nav>
   );
 }
