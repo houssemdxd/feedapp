@@ -12,6 +12,23 @@ import Link from "next/link";
 import LoginAlerts from "./LoginAlerts";
 import Spinner from "../ui/spinner/Spinner";
 
+
+type Role = "client" | "organization";
+type User = { _id: string; email: string; role: Role } & Partial<{
+  fname: string; lname: string; bio: string; image: string; country: string;
+  postalCode: string; city: string; userName: string; phone: string;
+}>;
+
+type MeResponse = { user: User | null };
+
+async function getMe(): Promise<User | null> {
+  const res = await fetch("/api/auth/me", { method: "GET", credentials: "include" });
+  if (!res.ok) return null;
+  const data = (await res.json()) as MeResponse;
+  return data.user ?? null;
+}
+
+
 export default function SignInForm() {
   const [note, setNote] = useState<string | null>(null);
 
@@ -28,6 +45,17 @@ export default function SignInForm() {
   useEffect(() => {
     if (signupOk) setNote("Account created. Please sign in.");
   }, [signupOk]);
+
+  useEffect(() => {
+  (async () => {
+    const user = await getMe();
+    if (!user) return;
+    const next = sp.get("next");
+    if (next) { router.replace(next); return; }
+    router.replace(user.role === "organization" ? "/admin" : "/client");
+  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -52,18 +80,42 @@ export default function SignInForm() {
         setLoading(false);
         return;
       }
+      const user = await getMe();
+      if (!user) {
+        setError("Could not load session. Try again.");
+        return;
+      }
 
-      router.push("/admin");
+
+      // honor ?next=… if present, otherwise role home
+      const next = sp.get("next");
+      if (next) {
+        router.replace(next);
+        return;
+      }
+
+      if (user.role === "organization") {
+        console.log("[login] role=organization");
+        router.replace("/admin");
+      } else if (user.role === "client") {
+        console.log("[login] role=client");
+        router.replace("/client");
+      }
+
     } catch {
       setError("Something went wrong. Try again later.");
     } finally {
+      const user = await getMe();
+      console.log("finally role!!!!!!!!!!!" + user?.role);
+
       setLoading(false);
+
     }
   }
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
-      
+
       <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
         <Link
           href="/"
@@ -142,13 +194,13 @@ export default function SignInForm() {
                 Sign in
               </Button> */}
               <Button className="w-full" size="sm" type="submit" disabled={loading} aria-busy={loading || undefined}>
-              <span className="flex items-center justify-center gap-2">
-                {loading && <Spinner />}
-                <span className={loading ? "animate-pulse" : ""}>
-                  {loading ? "Signing in..." : "Sign In"}
+                <span className="flex items-center justify-center gap-2">
+                  {loading && <Spinner />}
+                  <span className={loading ? "animate-pulse" : ""}>
+                    {loading ? "Signing in..." : "Sign In"}
+                  </span>
                 </span>
-              </span>
-            </Button>
+              </Button>
             </div>
           </div>
         </form>
@@ -165,7 +217,7 @@ export default function SignInForm() {
           </p>
         </div>
 
-        
+
       </div>
       {signupOk && (
         <LoginAlerts />

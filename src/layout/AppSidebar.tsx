@@ -103,18 +103,18 @@ const othersItems: NavItem[] = [
   //     { name: "Bar Chart", path: "/admin/bar-chart", pro: false },
   //   ],
   // },
-  {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/admin/alerts", pro: false },
-      { name: "Avatar", path: "/admin/avatars", pro: false },
-      { name: "Badge", path: "/admin/badge", pro: false },
-      { name: "Buttons", path: "/admin/buttons", pro: false },
-      { name: "Images", path: "/admin/images", pro: false },
-      { name: "Videos", path: "/admin/videos", pro: false },
-    ],
-   },
+  // {
+  //   icon: <BoxCubeIcon />,
+  //   name: "UI Elements",
+  //   subItems: [
+  //     { name: "Alerts", path: "/admin/alerts", pro: false },
+  //     { name: "Avatar", path: "/admin/avatars", pro: false },
+  //     { name: "Badge", path: "/admin/badge", pro: false },
+  //     { name: "Buttons", path: "/admin/buttons", pro: false },
+  //     { name: "Images", path: "/admin/images", pro: false },
+  //     { name: "Videos", path: "/admin/videos", pro: false },
+  //   ],
+  //  },
   // {
   //   icon: <PlugInIcon />,
   //   name: "Authentication",

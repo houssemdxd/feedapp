@@ -3,6 +3,7 @@ import './globals.css';
 
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import ReduxProvider from '@/store/ReduxProvider';
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -24,9 +25,11 @@ export default function RootLayout({
         <link rel="icon" href="/images/logo/logo-icon.svg" />
       </head>
       <body className={`${outfit.className} dark:bg-gray-900`}>
-        <ThemeProvider>
-          <SidebarProvider>{children}</SidebarProvider>
-        </ThemeProvider>
+        <ReduxProvider>
+          <ThemeProvider>
+            <SidebarProvider>{children}</SidebarProvider>
+          </ThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   );
