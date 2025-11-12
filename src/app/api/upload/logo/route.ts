@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+import { put } from '@vercel/blob';
+
+function getBlobToken(): string {
+  const token =
+    process.env.BLOB_READ_WRITE_TOKEN ||
+    process.env["feed_blob_READ_WRITE_TOKEN"] ||
+    process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error(
+      "Blob token environment variable is not set. Expected one of: BLOB_READ_WRITE_TOKEN or feed_blob_READ_WRITE_TOKEN."
+    );
+  }
+  return token;
+}
+
+function extFromMime(mime: string) {
+  const ext = mime.split('/')[1]?.toLowerCase() || 'bin';
+  return ext === 'jpeg' ? 'jpg' : ext;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,36 +29,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file received.' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const token = getBlobToken();
+    const ext = file.type ? extFromMime(file.type) : (file.name.split('.').pop() || 'bin');
+    const filename = `${randomUUID()}.${ext}`;
+    const blobPath = `logos/${filename}`;
 
-    // Generate unique filename
-    const extension = file.name.split('.').pop();
-    const filename = `${uuidv4()}.${extension}`;
-
-    // Save to public/images/logos directory
-    const uploadDir = join(process.cwd(), 'public', 'images', 'logos');
-
-    // Ensure directory exists
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, continue
-      console.log('Directory creation result:', error);
-    }
-
-    const filepath = join(uploadDir, filename);
-
-    // Write the file
-    await writeFile(filepath, buffer);
-
-    // Return the path that can be used in the app
-    const fileUrl = `/images/logos/${filename}`;
+    const blob = await put(blobPath, file, {
+      access: 'public',
+      contentType: file.type || 'application/octet-stream',
+      token,
+    });
 
     return NextResponse.json({
       success: true,
       filename,
-      path: fileUrl,
+      path: blob.url,
       message: 'File uploaded successfully'
     });
 

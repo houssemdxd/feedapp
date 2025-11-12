@@ -21,7 +21,7 @@ export async function GET() {
   const user = await User.findById(payload.userId)
     .select("_id email fname lname role bio image country postalCode city userName phone")
     .lean();
-  console.log("fucking y=user :", user);
+  console.log("user :", user);
 
   if (!user) {
     return NextResponse.json({ user: null });
