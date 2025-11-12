@@ -64,9 +64,9 @@ export async function GET() {
   // 3️⃣ Load user from MongoDB
   await connectDB();
   const user = await User.findById(payload.userId)
-    .select("_id email fname lname role")
+    .select("_id email fname lname role bio image country postalCode city userName phone")
     .lean();
-    console.log("fucking y=user :", user );
+  console.log("fucking y=user :", user);
 
   if (!user) {
     return NextResponse.json({ user: null });
@@ -75,11 +75,18 @@ export async function GET() {
   // 4️⃣ Return user info
   return NextResponse.json({
     user: {
-      _id: String(user._id),
-      email: user.email,
-      fname: user.fname,
-      lname: user.lname,
-      role: user.role ?? "client",
+     _id: String(user._id),
+    email: user.email,
+    fname: user.fname,
+    lname: user.lname,
+    role: user.role ?? "client",
+    bio: user.bio ?? "none",
+    phone: user.phone ?? "none",
+    country: user.country ?? "none",
+    postalCode: user.postalCode ?? "none",
+    city: user.city ?? "none",
+    image: user.image ?? "/images/user/user-05.jpg",
+    userName: user.userName ?? "none",
     },
   });
 }

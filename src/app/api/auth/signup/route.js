@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   await connectDB();
-  const { fname, lname, email, password, role } = await req.json();
+
+  const { fname, lname, email, password, role,   } = await req.json();
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
@@ -12,7 +13,10 @@ export async function POST(req) {
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await User.create({ fname, lname, email, password: hashedPassword, role });
+  var userName = "";
+  if (role == "client") userName = fname+" "+lname ;
+  else userName = fname;
+  const user = await User.create({ fname, lname, email, password: hashedPassword, role, userName });
 
   return new Response(JSON.stringify({ message: "User created", userId: user._id }), { status: 201 });
 }

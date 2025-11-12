@@ -78,7 +78,7 @@ export async function POST(req) {
   if (!isMatch) return new Response(JSON.stringify({ error: "Invalid email or password" }), { status: 401 });
 
   //const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  const token = signAccessToken({ userId: String(user._id) });
+  const token = signAccessToken({ userId: String(user._id), role: String(user.role), });
   await setSessionCookie(token);
 
   return new Response(JSON.stringify({ token }), { status: 200 });

@@ -17,15 +17,31 @@ type SessionUser = {
   lname: string;
   role: "client" | "organization";
   // Optional fields (we provide static fallbacks if undefined)
-  title?: string;
-  location?: string;
+  city?: string;
   phone?: string;
   bio?: string;
   image?: string;
+  userName?: string;
 };
 type MeResponse = { user: SessionUser | null };
 
+
+
+
+
+function Spinner() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 animate-spin" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" className="opacity-25" />
+      <path d="M4 12a8 8 0 0116 0" stroke="currentColor" strokeWidth="4" strokeLinecap="round" fill="none" className="opacity-75" />
+    </svg>
+  );
+}
+
+
+
 // ---------- Small skeletons for smooth loading ----------
+
 function CircleSkeleton({ size = 80 }: { size?: number }) {
   return (
     <span
@@ -54,18 +70,17 @@ export default function UserMetaCard() {
   const [loading, setLoading] = useState(true);
 
   // local form state for modal (prefilled from display values)
-  const [firstName, setFirstName] = useState("Musharof");
-  const [lastName, setLastName] = useState("Chowdhury");
-  const [email, setEmail] = useState("randomuser@pimjo.com");
-  const [title, setTitle] = useState("Team Manager");
-  const [location, setLocation] = useState("Arizona, United States");
-  const [phone, setPhone] = useState("+09 363 398 46");
-  const [bio, setBio] = useState("Team Manager");
-  const [facebook, setFacebook] = useState("https://www.facebook.com/PimjoHQ");
-  const [xcom, setXcom] = useState("https://x.com/PimjoHQ");
-  const [linkedin, setLinkedin] = useState("https://www.linkedin.com/company/pimjo");
-  const [instagram, setInstagram] = useState("https://instagram.com/PimjoHQ");
 
+  const [userName, setUserName] = useState("Team Manager");
+  const [city, setCity] = useState("Arizona, United States");
+  const [bio, setBio] = useState("Team Manager");
+
+
+
+
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   // fetch current user once on mount
   useEffect(() => {
     let cancelled = false;
@@ -89,82 +104,120 @@ export default function UserMetaCard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [!user]);
 
   // Display values with **static fallbacks** if any user fields are missing
   const display = useMemo(() => {
     const u = user;
-    const fname = u?.fname?.trim() || "Musharof";
-    const lname = u?.lname?.trim() || "Chowdhury";
+    setUserName(u?.userName?.trim()||"none");
+    setBio(u?.userName?.trim()||"none");
+    console.log("image :   ", u?.image);
     return {
-      name: `${fname} ${lname}`.trim(),
-      title: u?.title?.trim() || u?.bio?.trim() || "Team Manager",
-      location: u?.location?.trim() || "Arizona, United States",
-      email: u?.email?.trim() || "randomuser@pimjo.com",
-      phone: u?.phone?.trim() || "+09 363 398 46",
+      name: u?.userName?.trim() || "none",
+      city: u?.city?.trim() || "Arizona, United States",
       bio: u?.bio?.trim() || "Team Manager",
-      image: u?.image?.trim() || "/images/user/owner.jpg",
-      fname,
-      lname,
+      image: u?.image?.trim() || "/images/user/user-05.jpg",
+
     };
   }, [user]);
 
   // When opening the modal, prefill form from display values
   const handleOpenModal = () => {
-    setFirstName(display.fname);
-    setLastName(display.lname);
-    setEmail(display.email);
-    setTitle(display.title);
-    setLocation(display.location);
-    setPhone(display.phone);
+
+    setUserName(display.name);
+    setCity(display.city);
     setBio(display.bio);
     // socials remain whatever you keep in state (static by default)
     openModal();
   };
 
   // Save (stub): plug your API call here when ready
- // inside UserMetaCard.tsx
-const handleSave = async () => {
-  // call API to update only fname, lname, email
-  const res = await fetch("/api/auth/profile", {
-    method: "PATCH",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      fname: firstName,
-      lname: lastName,
-      email: email,
-    }),
-  });
+  // inside UserMetaCard.tsx
+  const handleSave = async () => {
+    // call API to update only fname, lname, email
+    const res = await fetch("/api/auth/profile", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        bio: bio,
+        userName: userName,
+        city: city,
+      }),
+    });
 
-  if (!res.ok) {
-    const j = await res.json().catch(() => ({}));
-    alert(j?.error ?? "Failed to save");
-    return;
-  }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      alert(j?.error ?? "Failed to save");
+      return;
+    }
 
-  const j = (await res.json()) as { user: SessionUser };
-  // optimistically update local state (also reflects server truth)
-  setUser((prev) => {
-    const base: SessionUser =
-      prev ?? { _id: j.user._id, email: j.user.email, fname: j.user.fname, lname: j.user.lname, role: j.user.role };
-    return {
-      ...base,
-      email: j.user.email,
-      fname: j.user.fname,
-      lname: j.user.lname,
-    };
-  });
+    const j = (await res.json()) as { user: SessionUser };
+    // optimistically update local state (also reflects server truth)
+    setUser((prev) => {
+      const base: SessionUser =
+        prev ?? { _id: j.user._id, email: j.user.email, fname: j.user.fname, lname: j.user.lname, role: j.user.role };
+      return {
+        ...base,
+        email: j.user.email,
+        fname: j.user.fname,
+        lname: j.user.lname,
+      };
+    });
 
-  closeModal();
-};
+    closeModal();
+  };
+
+  const pickImage = () => fileInputRef.current?.click();
+
+  const onImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    setUploadError("");
+
+    // basic client-side checks (optional)
+    if (!f.type.startsWith("image/")) {
+      setUploadError("Please select an image file.");
+      return;
+    }
+    if (f.size > 2 * 1024 * 1024) { // 2 MB limit example
+      setUploadError("Max image size is 2MB.");
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append("file", f);
+
+    setUploading(true);
+    try {
+      const res = await fetch("/api/auth/users/image", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      // update local user (and thus display.image) optimistically
+      setUser((prev) => (prev ? { ...prev, image: data.url || data.image?.url || prev.image } : prev));
+    } catch (err: any) {
+      setUploadError(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      // reset input so selecting the same file again triggers change
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <>
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
-            <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
+            {/* <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
               {loading ? (
                 <CircleSkeleton size={80} />
               ) : (
@@ -175,7 +228,65 @@ const handleSave = async () => {
                   alt={display.name}
                 />
               )}
+            </div> */}
+            <div className="relative">
+              {/* hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onImageSelected}
+              />
+
+              <button
+                type="button"
+                onClick={pickImage}
+                disabled={loading || uploading}
+                title="Change image"
+                className={[
+                  "group relative w-20 h-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-800",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/70",
+                  uploading ? "cursor-not-allowed opacity-75" : ""
+                ].join(" ")}
+              >
+                {loading ? (
+                  <CircleSkeleton size={80} />
+                ) : (
+                  <>
+                    <Image
+                      width={80}
+                      height={80}
+                      src={display.image}
+                      alt={display.name}
+                      className="object-cover"
+                    />
+
+                    {/* hover overlay */}
+                    <span
+                      className={[
+                        "pointer-events-none absolute inset-0 hidden items-center justify-center bg-black/50 text-white text-xs",
+                        "group-hover:flex"
+                      ].join(" ")}
+                    >
+                      {uploading ? (
+                        <span className="flex items-center gap-2">
+                          <Spinner /> Uploading…
+                        </span>
+                      ) : (
+                        "Change"
+                      )}
+                    </span>
+                  </>
+                )}
+              </button>
+
+              {/* upload error (if any) */}
+              {uploadError && (
+                <p className="mt-2 text-xs text-red-500">{uploadError}</p>
+              )}
             </div>
+
 
             <div className="order-3 xl:order-2">
               <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
@@ -184,11 +295,11 @@ const handleSave = async () => {
 
               <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {loading ? <LineSkeleton width="12ch" /> : display.title}
+                  {loading ? <LineSkeleton width="12ch" /> : display.bio}
                 </p>
                 <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {loading ? <LineSkeleton width="18ch" /> : display.location}
+                  {loading ? <LineSkeleton width="18ch" /> : display.city}
                 </p>
               </div>
             </div>
@@ -198,7 +309,7 @@ const handleSave = async () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={facebook}
+                
                 className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
               >
                 <svg className="fill-current" width="20" height="20" viewBox="0 0 20 20" aria-hidden>
@@ -207,7 +318,7 @@ const handleSave = async () => {
               </a>
 
               <a
-                href={xcom}
+                
                 target="_blank"
                 rel="noreferrer"
                 className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
@@ -218,7 +329,7 @@ const handleSave = async () => {
               </a>
 
               <a
-                href={linkedin}
+                
                 target="_blank"
                 rel="noreferrer"
                 className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
@@ -228,8 +339,7 @@ const handleSave = async () => {
                 </svg>
               </a>
 
-              <a
-                href={instagram}
+              <a                
                 target="_blank"
                 rel="noreferrer"
                 className="flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200"
@@ -263,7 +373,7 @@ const handleSave = async () => {
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
+              Edit Personal Meta Card
             </h4>
             <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
               Update your details to keep your profile up-to-date.
@@ -277,69 +387,20 @@ const handleSave = async () => {
               handleSave();
             }}
           >
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Social Links
-                </h5>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div>
-                    <Label>Facebook</Label>
-                    <Input type="text" value={facebook} onChange={(e) => setFacebook(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>X.com</Label>
-                    <Input type="text" value={xcom} onChange={(e) => setXcom(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>LinkedIn</Label>
-                    <Input type="text" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label>Instagram</Label>
-                    <Input type="text" value={instagram} onChange={(e) => setInstagram(e.target.value)} />
-                  </div>
-                </div>
-              </div>
+            <div className="custom-scrollbar h-150px] overflow-y-auto px-2 pb-3">
 
               <div className="mt-7">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
-                </h5>
 
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+                    <Label>Organization Name</Label>
+                    <Input type="text" value={userName} onChange={(e) => setUserName(e.target.value)} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Title</Label>
-                    <Input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Location</Label>
-                    <Input type="text" value={location} onChange={(e) => setLocation(e.target.value)} />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Phone</Label>
-                    <Input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <Label>City</Label>
+                    <Input type="text" value={city} onChange={(e) => setCity(e.target.value)} />
                   </div>
 
                   <div className="col-span-2">

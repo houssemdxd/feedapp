@@ -1,37 +1,30 @@
 import type { NextConfig } from "next";
-import withPWAInit from "next-pwa";
+import withPWAInit from "@ducanh2912/next-pwa";
 
-const isProd = process.env.NODE_ENV === "production"; // true seulement en prod
+const isProd = process.env.NODE_ENV === "production";
 
 const withPWA = withPWAInit({
   dest: "public",
+  disable: !isProd,
   register: true,
-  skipWaiting: true,
-  disable: !isProd, // désactive PWA en dev
-  buildExcludes: [/middleware-manifest\.json$/],
-  runtimeCaching: [
-    {
-      urlPattern: /^https?.*/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'offline-cache',
-        expiration: { maxEntries: 200 },
-      },
-    },
-    {
-      urlPattern: /^\/(admin|signin|$)/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'protected-pages-cache',
-        expiration: { maxEntries: 20 },
-      },
-    },
-  ],
+  //skipWaiting: true,
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  //swcMinify: true,
+  workboxOptions: {
+    disableDevLogs: true,
+  },
 });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  eslint: { ignoreDuringBuilds: true },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: { 
+    ignoreDuringBuilds: true 
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

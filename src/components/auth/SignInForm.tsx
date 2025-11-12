@@ -10,32 +10,34 @@ import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import LoginAlerts from "./LoginAlerts";
+import Spinner from "../ui/spinner/Spinner";
 
 export default function SignInForm() {
   const [note, setNote] = useState<string | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const router = useRouter();
   const sp = useSearchParams();
   const signupOk = sp.get("signup") === "success";
+
   useEffect(() => {
-    if (signupOk) {
-      setNote("Account created. Please sign in.");
-    }
+    if (signupOk) setNote("Account created. Please sign in.");
   }, [signupOk]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return; // guard
     setError("");
+    setLoading(true);
 
     try {
       const res = await fetch("/api/auth/login", {
@@ -45,19 +47,19 @@ export default function SignInForm() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.message || "Login failed");
+        setLoading(false);
         return;
       }
 
-      alert("✅ Login successful!");
-      // Redirect to dashboard
       router.push("/admin");
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Try again later.");
+    } finally {
+      setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
@@ -128,7 +130,7 @@ export default function SignInForm() {
                 </span>
               </div>
               <Link
-                href="/reset-password"
+                href="/forgot-password"
                 className="text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400"
               >
                 Forgot password?
@@ -136,9 +138,17 @@ export default function SignInForm() {
             </div>
 
             <div>
-              <Button className="w-full" size="sm" type="submit">
+              {/* <Button className="w-full" size="sm" type="submit">
                 Sign in
-              </Button>
+              </Button> */}
+              <Button className="w-full" size="sm" type="submit" disabled={loading} aria-busy={loading || undefined}>
+              <span className="flex items-center justify-center gap-2">
+                {loading && <Spinner />}
+                <span className={loading ? "animate-pulse" : ""}>
+                  {loading ? "Signing in..." : "Sign In"}
+                </span>
+              </span>
+            </Button>
             </div>
           </div>
         </form>

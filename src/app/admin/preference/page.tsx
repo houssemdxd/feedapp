@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import QRCode from 'react-qr-code';
 import { Preferences } from '@/lib/preferences';
+//ajbouni
+//use serer 
 
 export default function AdminPreferencePage() {
   const [preferences, setPreferences] = useState<Preferences>({

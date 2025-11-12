@@ -12,6 +12,7 @@ export type SessionUser = {
   email: string;
   fname: string;
   lname: string;
+  image?: string | null;
   role: "client" | "organization";
 };
 type MeResponse = { user: SessionUser | null };
@@ -23,7 +24,6 @@ function initials(u: SessionUser) {
   return (ab || u.email?.[0] || "?").toUpperCase();
 }
 
-/** Simple shimmer skeleton circle */
 function AvatarSkeleton() {
   return (
     <span
@@ -95,7 +95,8 @@ export default function UserDropdown() {
 
   const displayName = user ? `${user.fname} ${user.lname}`.trim() : "Guest";
   const email = user?.email ?? "—";
-  const imageSrc: string | null = null;
+  const imageSrc =
+    (user?.image && user.image.trim().length > 0 ? user.image : null) || null;
 
   return (
     <div className="relative">
@@ -104,9 +105,8 @@ export default function UserDropdown() {
           e.stopPropagation();
           setIsOpen((v) => !v);
         }}
-        className={`flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle transition-opacity ${
-          ready ? "opacity-100" : "opacity-95"
-        }`}
+        className={`flex items-center text-gray-700 dark:text-gray-400 dropdown-toggle transition-opacity ${ready ? "opacity-100" : "opacity-95"
+          }`}
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-busy={loading}
@@ -118,7 +118,13 @@ export default function UserDropdown() {
         ) : (
           <span className="mr-3 overflow-hidden rounded-full h-11 w-11 grid place-items-center bg-gray-100 dark:bg-white/10">
             {imageSrc ? (
-              <Image width={44} height={44} src={imageSrc} alt="User" />
+              <Image
+                src={imageSrc}
+                alt={displayName || "User"}
+                width={44}
+                height={44}
+                className="h-11 w-11 object-cover"
+              />
             ) : (
               <span className="text-sm font-semibold text-gray-700 dark:text-white">
                 {user ? initials(user) : "?"}
@@ -134,9 +140,8 @@ export default function UserDropdown() {
 
         {/* Caret */}
         <svg
-          className={`ml-1 stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`ml-1 stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
           width="18"
           height="20"
           viewBox="0 0 18 20"
@@ -182,7 +187,7 @@ export default function UserDropdown() {
             <DropdownItem
               onItemClick={() => setIsOpen(false)}
               tag="a"
-              href="/profile"
+              href={user?.role=="organization" ? "/admin/profile" : "/client/profile"} 
               className="flex items-center gap-3 px-3 py-2 font-medium text-gray-700 rounded-lg group text-theme-sm hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5"
             >
               Edit profile

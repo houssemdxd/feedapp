@@ -1,14 +1,23 @@
 import { Schema, model, models, type Model, type Types } from "mongoose";
 
-export type UserRole = "client" | "organization";
+ export type UserRole = "client" | "organization";
 
 export interface IUser {
   _id: Types.ObjectId;
+
   fname: string;
   lname: string;
+  userName: string; 
   email: string;
   password: string;
   role: UserRole;
+  bio?: string | null;
+  country?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  phone?: string | null;
+
+  image?: string | null;
   generatedCode?: string; // 6-digit access code
 }
 
@@ -16,9 +25,17 @@ const UserSchema = new Schema<IUser>(
   {
     fname: { type: String, required: true, trim: true },
     lname:  { type: String, required: true, trim: true },
+    userName: { type: String, required: false, trim: true },
     email:     { type: String, required: true, unique: true, lowercase: true, index: true },
     password:  { type: String, required: true },
     role:      { type: String, enum: ["client", "organization"], default: "client", required: true },
+    bio: { type: String, trim: true, maxlength: 1000, default: null },
+    country: { type: String, trim: true, uppercase: true, minlength: 2, maxlength: 2, default: null },
+    city: { type: String, trim: true, maxlength: 120, default: null },
+    postalCode: { type: String, trim: true, maxlength: 20, default: null },
+    phone: { type: String, required: false, trim: true },
+
+    image:      { type: String, default: null },
     generatedCode: { type: String, unique: true, sparse: true }, // 6-digit code, optional but unique when present
   },
   { timestamps: true }
@@ -26,6 +43,12 @@ const UserSchema = new Schema<IUser>(
 
 const User: Model<IUser> = models.User || model<IUser>("User", UserSchema);
 export default User;
+
+
+
+
+
+
 // src/models/User.ts
 
 
