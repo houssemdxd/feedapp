@@ -1,10 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
+import { put } from '@vercel/blob';
 import { connectDB } from '@/lib/mongodb';
 import { getCurrentUser } from '@/lib/session';
 import BackgroundImage from '@/models/BackgroundImage';
+
+function getBlobToken(): string {
+  const token =
+    process.env.BLOB_READ_WRITE_TOKEN ||
+    process.env["feed_blob_READ_WRITE_TOKEN"] ||
+    process.env.VERCEL_BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    throw new Error(
+      'Blob token environment variable is not set. Expected one of: BLOB_READ_WRITE_TOKEN or feed_blob_READ_WRITE_TOKEN.'
+    );
+  }
+  return token;
+}
+
+function extFromMime(mime: string) {
+  const ext = mime.split('/')[1]?.toLowerCase() || 'bin';
+  return ext === 'jpeg' ? 'jpg' : ext;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,53 +40,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No file received.' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const token = getBlobToken();
+    const ext = file.type ? extFromMime(file.type) : (file.name.split('.').pop() || 'bin');
+    const filename = `${randomUUID()}.${ext}`;
+    const blobPath = `backgrounds/${filename}`;
 
-    // Generate unique filename
-    const extension = file.name.split('.').pop();
-    const filename = `${uuidv4()}.${extension}`;
+    const blob = await put(blobPath, file, {
+      access: 'public',
+      contentType: file.type || 'application/octet-stream',
+      token,
+    });
 
-    // Save to public/images/backgrounds directory
-    const uploadDir = join(process.cwd(), 'public', 'images', 'backgrounds');
-
-    // Ensure directory exists
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, continue
-      console.log('Directory creation result:', error);
-    }
-
-    const filepath = join(uploadDir, filename);
-
-    // Write the file
-    await writeFile(filepath, buffer);
-
-    // Save metadata to database
+    // Save metadata to database using the blob URL
     const backgroundImage = await BackgroundImage.create({
       filename,
       originalName: file.name,
-      path: `/images/backgrounds/${filename}`,
-      size: buffer.length,
+      path: blob.url,
+      size: file.size,
       userId: user._id,
     });
 
-    // Return the path that can be used in the app
-    const fileUrl = `/images/backgrounds/${filename}`;
-
     // Convert createdAt to ISO string if it exists
-    const uploadedAt = backgroundImage.createdAt 
+    const uploadedAt = backgroundImage.createdAt
       ? new Date(backgroundImage.createdAt).toISOString()
       : new Date().toISOString();
 
     return NextResponse.json({
       success: true,
       filename,
-      path: fileUrl,
+      path: blob.url,
       id: backgroundImage._id.toString(),
       originalName: file.name,
-      size: buffer.length,
+      size: file.size,
       uploadedAt,
       message: 'Background image uploaded successfully'
     });
