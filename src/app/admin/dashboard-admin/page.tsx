@@ -70,29 +70,63 @@ export default function FormsPostsTable() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewFormData, setViewFormData] = useState<any | null>(null);
+useEffect(() => {
+  async function fetchData() {
+    console.log("🟦 [fetchData] Starting fetch for form templates...");
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const res: any = await getAllFormTemplates();
-        if (res.success) {
-          const mappedItems: Item[] = res.data.map((f: any) => ({
-            id: f.id,
-            title: f.title,
-            type: f.type,
-            createdAt: new Date(f.createdAt).toLocaleDateString(),
-          }));
-          setItems(mappedItems);
-        } else {
-          console.error(res.error);
-        }
-      } catch (err) {
-        console.error("Failed to fetch items:", err);
+    try {
+      const res: any = await getAllFormTemplates();
+
+      console.log("🔍 [fetchData] Raw response from getAllFormTemplates:", res);
+
+      if (!res) {
+        console.warn("⚠️ [fetchData] Response is undefined or null.");
       }
+
+      if (res.success) {
+        if (Array.isArray(res.data)) {
+          console.log(`📦 [fetchData] Received ${res.data.length} templates from backend.`);
+          if (res.data.length > 0) {
+            console.table(
+              res.data.map((f: any) => ({
+                id: f.id || f._id,
+                title: f.title,
+                type: f.type,
+                createdAt: f.createdAt,
+              }))
+            );
+          } else {
+            console.warn("⚠️ [fetchData] No templates found in response (empty array).");
+          }
+        } else {
+          console.error("❌ [fetchData] res.data is not an array:", res.data);
+        }
+
+        const mappedItems: Item[] = (res.data || []).map((f: any) => ({
+          id: f.id || f._id,
+          title: f.title || "Untitled",
+          type: f.type?.toLowerCase?.() || "form",
+          createdAt: f.createdAt
+            ? new Date(f.createdAt).toLocaleDateString()
+            : "N/A",
+        }));
+
+        console.log("✅ [fetchData] Mapped items:", mappedItems);
+
+        setItems(mappedItems);
+      } else {
+        console.error("❌ [fetchData] getAllFormTemplates failed:", res.error);
+      }
+    } catch (err) {
+      console.error("🚨 [fetchData] Exception while fetching items:", err);
+    } finally {
+      console.log("🟩 [fetchData] Done fetching templates.");
       setLoading(false);
     }
-    fetchData();
-  }, []);
+  }
+
+  fetchData();
+}, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
