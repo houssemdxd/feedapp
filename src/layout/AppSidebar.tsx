@@ -52,7 +52,7 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Form", path: "/admin/builder/form", pro: false },
       { name: "Survey", path: "/admin/builder/survey", pro: false },
-      { name: "Post", path: "/admin/builder/post", pro: false }
+      /*{ name: "Post", path: "/admin/builder/post", pro: false }*/
     ],
   },
   {

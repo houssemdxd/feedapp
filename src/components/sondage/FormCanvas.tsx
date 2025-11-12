@@ -1,59 +1,101 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import EditableCard from "../formElements/EditableCard";
 
 export default function FormCanvas({ components = [], setComponents }: any) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempQuestion, setTempQuestion] = useState("");
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false); // ✅ Loading state
 
   const ensureUniqueIds = (items: any[]): any[] =>
     items.map((item) => ({ ...item, id: uuidv4() }));
 
-const handleDrop = (e: any, dropIndex?: number) => {
-  e.preventDefault();
-  e.stopPropagation();
+  // ✅ AI Survey Generation Handler
+  const handleGenerateSurvey = async () => {
+    const topic = prompt("Enter a survey topic (e.g. customer feedback, product review, event feedback):");
+    if (!topic) return;
 
-  const data = JSON.parse(e.dataTransfer.getData("component"));
-  let newElements: any[] = [];
+    setIsGenerating(true);
 
-  // ✅ If it's a predefined group of elements, assign unique IDs
-  if (data.type === "predefined" && Array.isArray(data.elements)) {
-    newElements = ensureUniqueIds(data.elements);
-  } else {
-    // ✅ Ensure consistent defaults
-    const defaultElementsMap: Record<string, string[]> = {
-      checkbox: ["Option 1", "Option 2", "Option 3"],
-      radio: ["Choice A", "Choice B", "Choice C"],
-      image: [],
-    };
+    try {
+      const res = await fetch("/api/generate-survey", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic }),
+      });
 
-    const defaultElements = defaultElementsMap[data.type] || [];
+      if (!res.ok) {
+        throw new Error("Failed to generate survey");
+      }
 
-    // ✅ Ensure the dropped element includes default `elements`
-    newElements = [
-      {
+      const data = await res.json();
+      console.log("API Response:", data); // ✅ Debug log
+
+      if (!data.questions || data.questions.length === 0) {
+        alert("AI couldn't generate questions. Try again!");
+        return;
+      }
+
+      // ✅ Convert AI questions to form components
+      const newComponents = data.questions.map((q: any) => ({
         id: uuidv4(),
-        question: "Untitled Question",
-        type: data.type,
-        elements: defaultElements,
-      },
-    ];
-  }
+        question: q.question,
+        type: q.type || "input",
+        elements: q.elements || [],
+      }));
 
-  // ✅ Properly insert into the array
-  setComponents((prev: any) => {
-    const updated = [...prev];
-    const index = dropIndex ?? prev.length;
-    updated.splice(index, 0, ...newElements);
-    return updated;
-  });
+      setComponents(newComponents);
+      alert(`✅ Generated ${newComponents.length} questions!`);
 
-  setDragOverIndex(null);
-};
+    } catch (error) {
+      console.error("Error generating survey:", error);
+      alert("Something went wrong. Check console for details.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDrop = (e: any, dropIndex?: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const data = JSON.parse(e.dataTransfer.getData("component"));
+    let newElements: any[] = [];
+
+    if (data.type === "predefined" && Array.isArray(data.elements)) {
+      newElements = ensureUniqueIds(data.elements);
+    } else {
+      const defaultElementsMap: Record<string, string[]> = {
+        checkbox: ["Option 1", "Option 2", "Option 3"],
+        radio: ["Choice A", "Choice B", "Choice C"],
+        image: [],
+      };
+
+      const defaultElements = defaultElementsMap[data.type] || [];
+
+      newElements = [
+        {
+          id: uuidv4(),
+          question: "Untitled Question",
+          type: data.type,
+          elements: defaultElements,
+        },
+      ];
+    }
+
+    setComponents((prev: any) => {
+      const updated = [...prev];
+      const index = dropIndex ?? prev.length;
+      updated.splice(index, 0, ...newElements);
+      return updated;
+    });
+
+    setDragOverIndex(null);
+  };
 
   const startEditing = (id: string, currentQuestion: string) => {
     setEditingId(id);
@@ -240,11 +282,23 @@ const handleDrop = (e: any, dropIndex?: number) => {
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => handleDrop(e)}
     >
-      <h2 className="text-lg font-semibold mb-3 dark:text-white">Form Canvas</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold dark:text-white">Form Canvas</h2>
+        
+        {/* ✅ AI Generation Button */}
+        <button
+          onClick={handleGenerateSurvey}
+          disabled={isGenerating}
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all"
+        >
+          <span>{isGenerating ? "⏳" : "✨"}</span>
+          {isGenerating ? "Generating..." : "Generate Survey with AI"}
+        </button>
+      </div>
 
       {components.length === 0 && (
-        <div className="text-gray-400 text-sm dark:text-white/70">
-          Drag components here...
+        <div className="text-gray-400 text-sm dark:text-white/70 text-center py-8">
+          Drag components here or generate a survey with AI...
         </div>
       )}
 
