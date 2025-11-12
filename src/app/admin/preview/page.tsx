@@ -3,8 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Preferences } from '@/lib/preferences';
 import BackgroundGallery from '@/components/BackgroundGallery';
+import { useAppDispatch } from '@/store/hooks';
+import { addBackgroundImage, deleteBackgroundImageByPath } from '@/store/slices/backgroundImagesSlice';
 
 export default function AdminPreviewPage() {
+  const dispatch = useAppDispatch();
   const [preferences, setPreferences] = useState<Preferences>({
     logo: '',
     name: 'Organization Name',
@@ -216,6 +219,17 @@ export default function AdminPreviewPage() {
         const uploadResult = await uploadResponse.json();
 
         if (uploadResponse.ok && uploadResult.success) {
+          // Add image to Redux store immediately
+          const newImage = {
+            id: uploadResult.id,
+            filename: uploadResult.filename,
+            originalName: uploadResult.originalName,
+            path: uploadResult.path,
+            size: uploadResult.size,
+            uploadedAt: uploadResult.uploadedAt || new Date().toISOString(),
+          };
+          dispatch(addBackgroundImage(newImage));
+
           // Update both the display state and the preferences
           setBackgroundImage(uploadResult.path);
           setPreferences(prev => ({
@@ -361,13 +375,10 @@ export default function AdminPreviewPage() {
     }
 
     try {
-      const response = await fetch(`/api/background-images?path=${encodeURIComponent(imagePath)}`, {
-        method: 'DELETE',
-      });
+      // Dispatch Redux action to delete the image
+      const result = await dispatch(deleteBackgroundImageByPath(imagePath));
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
+      if (deleteBackgroundImageByPath.fulfilled.match(result)) {
         // If the deleted image was currently selected, clear it from the preview
         if (backgroundImage === imagePath) {
           setBackgroundImage(null);
@@ -378,9 +389,11 @@ export default function AdminPreviewPage() {
           }));
           setSelectedTemplate(0);
         }
-        alert('✅ Background image deleted successfully!');
+        // Image is automatically removed from Redux store, no need to refresh
       } else {
-        alert(`Failed to delete background image: ${result.error || 'Unknown error'}`);
+        // Handle error
+        const errorMessage = result.payload as string;
+        alert(`Failed to delete background image: ${errorMessage}`);
       }
     } catch (error) {
       console.error('Error deleting background image:', error);
