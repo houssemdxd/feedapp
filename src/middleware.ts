@@ -8,32 +8,18 @@ const secret = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET || "secret
 type Role = "client" | "organization";
 type User = { userId?: string; role?: Role } & JWTPayload;
 
-// ---- Route groups -----------------------------------------------------------
 const CLIENT_ONLY = [
   /^\/dashboard(\/.*)?$/,
   /^\/profile(\/.*)?$/,
   /^\/client(\/.*)?$/,
-  
 ];
-
 const ORG_ONLY = [
   /^\/admin(\/.*)?$/,
   /^\/settings(\/.*)?$/,
   /^\/organization(\/.*)?$/,
 ];
-
-const GUEST_ONLY = [
-  /^\/signin$/,
-  /^\/signup$/,
-  /^\/forgot-password$/,
-];
-
-const PUBLIC = [
-  /^\/$/,               // make home public; move to a role group if needed
-  /^\/pricing$/,
-  /^\/about$/,
-];
-// -----------------------------------------------------------------------------
+const GUEST_ONLY = [/^\/signin$/, /^\/signup$/, /^\/forgot-password$/];
+const PUBLIC = [/^\/$/, /^\/pricing$/, /^\/about$/];
 
 function matchAny(pathname: string, patterns: RegExp[]) {
   return patterns.some((re) => re.test(pathname));
@@ -51,6 +37,20 @@ function roleHome(role?: Role) {
   return "/";
 }
 
+function serveRole404(req: NextRequest, opts: { expectedRole: Role; backHref: string; from?: string }) {
+  const url = new URL("/not-found", req.url);
+  if (opts.from) url.searchParams.set("from", opts.from);
+
+  const res = NextResponse.rewrite(url);
+  res.cookies.set("role_mismatch", JSON.stringify(opts), {
+    path: "/",
+    maxAge: 10,
+    httpOnly: false,
+    sameSite: "lax",
+  });
+  return res;
+}
+
 async function readUserFromJWT(req: NextRequest): Promise<User | null> {
   const token = req.cookies.get("session")?.value;
   if (!token) return null;
@@ -65,7 +65,6 @@ async function readUserFromJWT(req: NextRequest): Promise<User | null> {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip Next internals / static assets (middleware matcher is broad)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -80,7 +79,6 @@ export async function middleware(req: NextRequest) {
   const role = user?.role;
   const orgAccess = req.cookies.get("org_access")?.value;
 
-  // 1) Guest-only: block authenticated users
   if (matchAny(pathname, GUEST_ONLY)) {
     if (isAuthenticated) {
       return NextResponse.redirect(new URL(roleHome(role), req.url));
@@ -88,36 +86,28 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2) Public: always allow
   if (matchAny(pathname, PUBLIC)) {
     return NextResponse.next();
   }
 
-  // 3) Client-only
   if (matchAny(pathname, CLIENT_ONLY)) {
     if (!isAuthenticated) return redirectWithNext("/signin", req);
     if (role !== "client") {
-      return NextResponse.redirect(new URL(roleHome(role), req.url));
-      // or: return NextResponse.redirect(new URL("/403", req.url));
+      return serveRole404(req, { expectedRole: "client", backHref: roleHome(role), from: "client" });
     }
     return NextResponse.next();
   }
 
-  // 4) Organization-only
   if (matchAny(pathname, ORG_ONLY)) {
-    // Allow temporary access if user has org_access cookie (obtained via code/QR verification)
-    if (orgAccess) {
-      return NextResponse.next();
-    }
+    if (orgAccess) return NextResponse.next();
+
     if (!isAuthenticated) return redirectWithNext("/signin", req);
     if (role !== "organization") {
-      return NextResponse.redirect(new URL(roleHome(role), req.url));
-      // or: return NextResponse.redirect(new URL("/403", req.url));
+      return serveRole404(req, { expectedRole: "organization", backHref: roleHome(role), from: "organization" });
     }
     return NextResponse.next();
   }
 
-  // 5) Default policy: require auth (or change to default-public if you prefer)
   if (!isAuthenticated) {
     return redirectWithNext("/signin", req);
   }
@@ -125,6 +115,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Broad matcher; we still skip static/_next in code above.
   matcher: ["/((?!_next/|api/|.*\\..*).*)"],
 };
