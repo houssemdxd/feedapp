@@ -1,50 +1,47 @@
-import { useState, useEffect } from 'react';
+'use client';
 
-interface BackgroundImage {
-  id: string;
-  filename: string;
-  originalName: string;
-  path: string;
-  size: number;
-  uploadedAt: string;
-}
+import { useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  fetchBackgroundImages,
+  deleteBackgroundImageByPath,
+  type BackgroundImage,
+} from '@/store/slices/backgroundImagesSlice';
 
 interface BackgroundGalleryProps {
   onSelectBackground: (path: string) => void;
   currentBackground?: string | null;
+  onDeleteBackground?: (path: string) => void;
 }
 
-export default function BackgroundGallery({ onSelectBackground, currentBackground }: BackgroundGalleryProps) {
-  const [backgroundImages, setBackgroundImages] = useState<BackgroundImage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function BackgroundGallery({ onSelectBackground, currentBackground, onDeleteBackground }: BackgroundGalleryProps) {
+  const dispatch = useAppDispatch();
+  const { images: backgroundImages, loading, error } = useAppSelector((state) => state.backgroundImages);
 
   useEffect(() => {
-    const fetchBackgroundImages = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching background images for user...');
-        const response = await fetch('/api/background-images');
+    // Fetch background images when component mounts
+    dispatch(fetchBackgroundImages());
+  }, [dispatch]);
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Background images loaded:', data.backgroundImages?.length || 0, 'images');
-          setBackgroundImages(data.backgroundImages || []);
-        } else if (response.status === 401) {
-          setError('Please log in to view your uploaded background images');
-        } else {
-          setError('Failed to load background images');
+  const handleDelete = async (path: string) => {
+    try {
+      // Dispatch Redux action to delete the image
+      const result = await dispatch(deleteBackgroundImageByPath(path));
+      
+      if (deleteBackgroundImageByPath.fulfilled.match(result)) {
+        // If parent provided a callback, call it after successful deletion
+        if (onDeleteBackground) {
+          onDeleteBackground(path);
         }
-      } catch (error) {
-        console.error('Error fetching background images:', error);
-        setError('Error loading background images');
-      } finally {
-        setLoading(false);
+      } else {
+        // Handle error - could show a toast notification here
+        const errorMessage = result.payload as string;
+        console.error('Failed to delete background image:', errorMessage);
       }
-    };
-
-    fetchBackgroundImages();
-  }, []);
+    } catch (error) {
+      console.error('Error deleting background image:', error);
+    }
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -54,7 +51,7 @@ export default function BackgroundGallery({ onSelectBackground, currentBackgroun
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  if (loading) {
+  if (loading && backgroundImages.length === 0) {
     return (
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">My Background Images</h3>
@@ -66,7 +63,7 @@ export default function BackgroundGallery({ onSelectBackground, currentBackgroun
     );
   }
 
-  if (error) {
+  if (error && backgroundImages.length === 0) {
     return (
       <div className="mb-4">
         <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">My Background Images</h3>
@@ -117,6 +114,20 @@ export default function BackgroundGallery({ onSelectBackground, currentBackgroun
                   }}
                 />
               </div>
+
+              {/* Delete Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(image.path);
+                }}
+                className="absolute top-2 left-2 z-20 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                title="Delete background image"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
 
               {/* Selected indicator */}
               {currentBackground === image.path && (

@@ -25,6 +25,14 @@ const nextConfig: NextConfig = {
   eslint: { 
     ignoreDuringBuilds: true 
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.public.blob.vercel-storage.com",
+      },
+    ],
+  },
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,

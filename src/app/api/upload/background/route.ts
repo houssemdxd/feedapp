@@ -58,11 +58,19 @@ export async function POST(request: NextRequest) {
     // Return the path that can be used in the app
     const fileUrl = `/images/backgrounds/${filename}`;
 
+    // Convert createdAt to ISO string if it exists
+    const uploadedAt = backgroundImage.createdAt 
+      ? new Date(backgroundImage.createdAt).toISOString()
+      : new Date().toISOString();
+
     return NextResponse.json({
       success: true,
       filename,
       path: fileUrl,
       id: backgroundImage._id.toString(),
+      originalName: file.name,
+      size: buffer.length,
+      uploadedAt,
       message: 'Background image uploaded successfully'
     });
 
