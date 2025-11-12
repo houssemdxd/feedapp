@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+const FROM = process.env.SMTP_FROM || "no-reply@example.com";
 
 export const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -8,7 +9,15 @@ export const transporter = nodemailer.createTransport({
         pass: process.env.SMTP_PASS,
     },
 });
-
+async function sendMail(opts: { to: string; subject: string; html: string; text?: string }) {
+  return transporter.sendMail({
+    from: FROM,
+    to: opts.to,
+    subject: opts.subject,
+    text: opts.text, // plain-text fallback
+    html: opts.html,
+  });
+}
 export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     const mailOptions = {
         from: process.env.SMTP_FROM,
@@ -34,4 +43,20 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     //     html: `<p>Click the link to reset your password:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
     // });
     console.log("email sended !");
+}
+export async function sendVerificationEmail(to: string, verifyUrl: string) {
+  // Reuse your existing transport/provider (same as sendPasswordResetEmail)
+  // Example with your existing sender function pattern:
+  return await sendMail({
+    to,
+    subject: "Confirm your account",
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif">
+        <h2>Confirm your account</h2>
+        <p>Click the link below to verify your email address:</p>
+        <p><a href="${verifyUrl}">${verifyUrl}</a></p>
+        <p>This link expires soon. If you didn’t request this, you can ignore it.</p>
+      </div>
+    `,
+  });
 }
