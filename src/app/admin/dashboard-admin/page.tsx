@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AiOutlineFileText, AiOutlineFile, AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineFileText, AiOutlineDelete } from "react-icons/ai";
 import { getAllFormTemplates, deleteFormTemplate, getFormTemplateById } from "@/app/actions/formActions";
 import { useRouter } from "next/navigation";
 
@@ -11,7 +11,7 @@ interface Item {
   id: string;
   title: string;
   createdAt: string;
-  type: "form" | "post" | "survey";
+  type: "form" | "survey";
 }
 
 interface TableProps {
@@ -38,8 +38,8 @@ const ItemsTable: React.FC<TableProps> = ({ items, onDelete, onView }) => (
           <tr key={item.id}>
             <td className="px-4 py-2 text-gray-800 dark:text-gray-200">{item.title}</td>
             <td className="px-4 py-2 text-gray-800 dark:text-gray-200 flex items-center gap-1">
-              {item.type === "form" || item.type === "survey" ? <AiOutlineFileText /> : <AiOutlineFile />}
-              {item.type === "form" ? "Form" : item.type === "survey" ? "Survey" : "Post"}
+              <AiOutlineFileText />
+              {item.type === "form" ? "Form" : "Survey"}
             </td>
             <td className="px-4 py-2 text-gray-800 dark:text-gray-200">{item.createdAt}</td>
             <td className="px-4 py-2 text-gray-800 dark:text-gray-200 flex gap-2">
@@ -55,7 +55,6 @@ const ItemsTable: React.FC<TableProps> = ({ items, onDelete, onView }) => (
               >
                 <AiOutlineDelete /> Delete
               </button>
-             
             </td>
           </tr>
         ))}
@@ -66,71 +65,35 @@ const ItemsTable: React.FC<TableProps> = ({ items, onDelete, onView }) => (
 
 export default function FormsPostsTable() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"form" | "post" | "survey">("form");
+  const [activeTab, setActiveTab] = useState<"form" | "survey">("form");
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewFormData, setViewFormData] = useState<any | null>(null);
-useEffect(() => {
-  async function fetchData() {
-    console.log("🟦 [fetchData] Starting fetch for form templates...");
 
-    try {
-      const res: any = await getAllFormTemplates();
-
-      console.log("🔍 [fetchData] Raw response from getAllFormTemplates:", res);
-
-      if (!res) {
-        console.warn("⚠️ [fetchData] Response is undefined or null.");
-      }
-
-      if (res.success) {
-        if (Array.isArray(res.data)) {
-          console.log(`📦 [fetchData] Received ${res.data.length} templates from backend.`);
-          if (res.data.length > 0) {
-            console.table(
-              res.data.map((f: any) => ({
-                id: f.id || f._id,
-                title: f.title,
-                type: f.type,
-                createdAt: f.createdAt,
-              }))
-            );
-          } else {
-            console.warn("⚠️ [fetchData] No templates found in response (empty array).");
-          }
-        } else {
-          console.error("❌ [fetchData] res.data is not an array:", res.data);
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const res: any = await getAllFormTemplates();
+        if (res.success && Array.isArray(res.data)) {
+          const mappedItems: Item[] = res.data.map((f: any) => ({
+            id: f.id || f._id,
+            title: f.title || "Untitled",
+            type: f.type?.toLowerCase?.() || "form",
+            createdAt: f.createdAt ? new Date(f.createdAt).toLocaleDateString() : "N/A",
+          }));
+          setItems(mappedItems);
         }
-
-        const mappedItems: Item[] = (res.data || []).map((f: any) => ({
-          id: f.id || f._id,
-          title: f.title || "Untitled",
-          type: f.type?.toLowerCase?.() || "form",
-          createdAt: f.createdAt
-            ? new Date(f.createdAt).toLocaleDateString()
-            : "N/A",
-        }));
-
-        console.log("✅ [fetchData] Mapped items:", mappedItems);
-
-        setItems(mappedItems);
-      } else {
-        console.error("❌ [fetchData] getAllFormTemplates failed:", res.error);
+      } catch (err) {
+        console.error("Error fetching templates:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("🚨 [fetchData] Exception while fetching items:", err);
-    } finally {
-      console.log("🟩 [fetchData] Done fetching templates.");
-      setLoading(false);
     }
-  }
-
-  fetchData();
-}, []);
+    fetchData();
+  }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this item?")) return;
-
     try {
       const res: any = await deleteFormTemplate(id);
       if (res.success) {
@@ -145,16 +108,11 @@ useEffect(() => {
     }
   };
 
-
-
   const handleViewForm = async (id: string) => {
     try {
       const res = await getFormTemplateById(id);
-      if (res.success) {
-        setViewFormData(res.data);
-      } else {
-        alert("Failed to fetch form: " + res.error);
-      }
+      if (res.success) setViewFormData(res.data);
+      else alert("Failed to fetch form: " + res.error);
     } catch (err) {
       console.error(err);
       alert("Error fetching form");
@@ -167,114 +125,101 @@ useEffect(() => {
 
   return (
     <div className="p-5 w-full relative">
-      {/* Sticky Tab Header */}
+      {/* Only two tabs: Form & Survey */}
       <div className="flex border-b border-gray-200 dark:border-gray-700 mb-2 sticky top-0 bg-white dark:bg-gray-900 z-10">
-        {["form", "survey", "post"].map((tab) => (
+        {["form", "survey"].map((tab) => (
           <button
             key={tab}
             className={`flex-1 px-4 py-2 text-center font-medium ${
-              activeTab === tab ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 dark:text-gray-400"
+              activeTab === tab
+                ? "border-b-2 border-blue-600 text-blue-600"
+                : "text-gray-500 dark:text-gray-400"
             }`}
-            onClick={() => setActiveTab(tab as "form" | "post" | "survey")}
+            onClick={() => setActiveTab(tab as "form" | "survey")}
           >
-            {tab === "form" ? (
-              <span className="flex items-center justify-center gap-1">
-                <AiOutlineFileText /> Form
-              </span>
-            ) : tab === "survey" ? (
-              <span className="flex items-center justify-center gap-1">
-                <AiOutlineFileText /> Survey
-              </span>
-            ) : (
-              <span className="flex items-center justify-center gap-1">
-                <AiOutlineFile /> Post
-              </span>
-            )}
+            <span className="flex items-center justify-center gap-1">
+              <AiOutlineFileText /> {tab === "form" ? "Form" : "Survey"}
+            </span>
           </button>
         ))}
       </div>
 
-      {/* Scrollable Table */}
       <div className="overflow-x-auto max-h-[60vh]">
-        <ItemsTable
-          items={filteredItems}
-          onDelete={handleDelete}
-          onView={handleViewForm}
-        />
+        <ItemsTable items={filteredItems} onDelete={handleDelete} onView={handleViewForm} />
       </div>
 
-      {/* Modal Preview */}
-    {viewFormData && (
-  <div
-    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fadeIn"
-    onClick={() => setViewFormData(null)} // close if click outside
-  >
-    <div
-      className="relative bg-gradient-to-br from-white to-gray-100 dark:from-gray-900 dark:to-gray-800 w-full max-w-lg md:max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 overflow-y-auto max-h-[90vh]"
-      onClick={(e) => e.stopPropagation()} // prevent background click close
-    >
-      {/* Close Button */}
-      <button
-        onClick={() => setViewFormData(null)}
-        className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition"
-      >
-        ✕
-      </button>
-
-      <h3 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
-        {viewFormData.form.title}
-      </h3>
-
-      <form className="space-y-6">
-        {viewFormData.questions.length > 0 ? (
-          viewFormData.questions.map((q: any) => (
-            <div
-              key={q.id}
-              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+      {/* Modal (unchanged) */}
+      {viewFormData && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fadeIn"
+          onClick={() => setViewFormData(null)}
+        >
+          <div
+            className="relative bg-gradient-to-br from-white to-gray-100 dark:from-gray-900 dark:to-gray-800 w-full max-w-lg md:max-w-2xl rounded-2xl shadow-2xl p-6 md:p-8 overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setViewFormData(null)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition"
             >
-              <label className="block font-medium mb-2 text-gray-800 dark:text-gray-200">
-                {q.question}
-              </label>
-
-              {q.type === "text" && (
-                <input
-                  type="text"
-                  placeholder="Enter your answer"
-                  className="border border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
+              ✕
+            </button>
+            <h3 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">
+              {viewFormData.form.title}
+            </h3>
+            <form className="space-y-6">
+              {viewFormData.questions.length > 0 ? (
+                viewFormData.questions.map((q: any) => (
+                  <div
+                    key={q.id}
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+                  >
+                    <label className="block font-medium mb-2 text-gray-800 dark:text-gray-200">
+                      {q.question}
+                    </label>
+                    {q.type === "text" && (
+                      <input
+                        type="text"
+                        placeholder="Enter your answer"
+                        className="border border-gray-300 dark:border-gray-600 rounded-lg p-2 w-full dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                      />
+                    )}
+                    {q.type === "radio" &&
+                      q.elements?.map((el: string, i: number) => (
+                        <label
+                          key={i}
+                          className="flex items-center gap-2 mb-1 text-gray-700 dark:text-gray-300"
+                        >
+                          <input type="radio" name={q.id} className="text-blue-500" /> {el}
+                        </label>
+                      ))}
+                    {q.type === "checkbox" &&
+                      q.elements?.map((el: string, i: number) => (
+                        <label
+                          key={i}
+                          className="flex items-center gap-2 mb-1 text-gray-700 dark:text-gray-300"
+                        >
+                          <input type="checkbox" name={q.id} className="text-blue-500" /> {el}
+                        </label>
+                      ))}
+                    {q.type === "rating" && (
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((r) => (
+                          <span key={r}>⭐</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 dark:text-gray-400">
+                  No questions available for this form.
+                </p>
               )}
-
-              {q.type === "radio" &&
-                q.elements?.map((el: string, i: number) => (
-                  <label key={i} className="flex items-center gap-2 mb-1 text-gray-700 dark:text-gray-300">
-                    <input type="radio" name={q.id} className="text-blue-500" /> {el}
-                  </label>
-                ))}
-
-              {q.type === "checkbox" &&
-                q.elements?.map((el: string, i: number) => (
-                  <label key={i} className="flex items-center gap-2 mb-1 text-gray-700 dark:text-gray-300">
-                    <input type="checkbox" name={q.id} className="text-blue-500" /> {el}
-                  </label>
-                ))}
-
-              {q.type === "rating" && (
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5].map((r) => (
-                    <span key={r}>⭐</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-500 dark:text-gray-400">No questions available for this form.</p>
-        )}
-      </form>
-    </div>
-  </div>
-)}
-
+            </form>
+          </div>
+        </div>  
+      )}
     </div>
   );
 }
