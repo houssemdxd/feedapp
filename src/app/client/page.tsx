@@ -10,20 +10,30 @@ import SurveyResponseForm, {
 
 type LookupStatus = "idle" | "loading" | "error" | "success";
 
+type OrganizationInfo = {
+  id: string;
+  name: string;
+  code: string;
+};
+
 export default function ClientDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [accessCode, setAccessCode] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [status, setStatus] = useState<LookupStatus>("idle");
-  const [currentSurvey, setCurrentSurvey] = useState<SurveyDetails | null>(null);
+  const [organization, setOrganization] = useState<OrganizationInfo | null>(null);
+  const [surveys, setSurveys] = useState<SurveyDetails[]>([]);
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   const resetState = useCallback(() => {
     setAccessCode("");
     setLookupError(null);
     setStatus("idle");
-    setCurrentSurvey(null);
+    setOrganization(null);
+    setSurveys([]);
+    setSelectedSurveyId(null);
     setHasSubmitted(false);
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -32,7 +42,7 @@ export default function ClientDashboard() {
     }
   }, [router]);
 
-  const fetchSurvey = useCallback(
+  const fetchOrganizationContent = useCallback(
     async (code: string) => {
       const normalized = code.trim().toUpperCase();
       if (!normalized) {
@@ -44,19 +54,25 @@ export default function ClientDashboard() {
       setLookupError(null);
 
       try {
-        const response = await fetch(
-          `/api/surveys/access-code/${normalized}`
-        );
+        const response = await fetch(`/api/surveys/access-code/${normalized}`);
         const data = await response.json();
 
         if (!response.ok) {
           setStatus("error");
-          setLookupError(data.error || "No survey matches this access code.");
-          setCurrentSurvey(null);
+          setLookupError(data.error || "No organization matches this access code.");
+          setOrganization(null);
+          setSurveys([]);
+          setSelectedSurveyId(null);
           return;
         }
 
-        setCurrentSurvey(data.survey);
+        const sortedSurveys: SurveyDetails[] = Array.isArray(data.surveys)
+          ? data.surveys
+          : [];
+
+        setOrganization(data.organization ?? null);
+        setSurveys(sortedSurveys);
+        setSelectedSurveyId(sortedSurveys[0]?.id ?? null);
         setAccessCode(normalized);
         if (typeof window !== "undefined") {
           const url = new URL(window.location.href);
@@ -71,7 +87,9 @@ export default function ClientDashboard() {
         setLookupError(
           "Unable to load this survey right now. Please try again later."
         );
-        setCurrentSurvey(null);
+        setOrganization(null);
+        setSurveys([]);
+        setSelectedSurveyId(null);
       }
     },
     [router]
@@ -82,20 +100,20 @@ export default function ClientDashboard() {
     if (codeParam) {
       const normalized = codeParam.trim().toUpperCase();
       setAccessCode(normalized);
-      fetchSurvey(normalized);
+      fetchOrganizationContent(normalized);
     }
-  }, [fetchSurvey, searchParams]);
+  }, [fetchOrganizationContent, searchParams]);
 
   const handleSubmitCode = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    fetchSurvey(accessCode);
+    fetchOrganizationContent(accessCode);
   };
 
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">
       <div className="col-span-12 space-y-6 xl:col-span-7">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-white/[0.03]">
-          {!currentSurvey ? (
+          {!organization ? (
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
@@ -153,8 +171,11 @@ export default function ClientDashboard() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-                    Fill out the survey
+                    {organization.name}
                   </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Access code: {organization.code}
+                  </p>
                   {hasSubmitted && (
                     <p className="mt-1 text-xs font-medium uppercase text-emerald-600 dark:text-emerald-400">
                       Response submitted — thank you for participating.
@@ -166,10 +187,45 @@ export default function ClientDashboard() {
                 </Button>
               </div>
 
-              <SurveyResponseForm
-                survey={currentSurvey}
-                onSubmitted={() => setHasSubmitted(true)}
-              />
+              {surveys.length === 0 ? (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-5 text-sm text-gray-600 dark:border-gray-700 dark:bg-white/5 dark:text-gray-300">
+                  This organization has not published any surveys yet.
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {surveys.map((survey) => {
+                      const isSelected = survey.id === selectedSurveyId;
+                      return (
+                        <button
+                          key={survey.id}
+                          onClick={() => {
+                            setSelectedSurveyId(survey.id);
+                            setHasSubmitted(false);
+                          }}
+                          className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                            isSelected
+                              ? "border-brand-500 bg-brand-500 text-white"
+                              : "border-gray-200 bg-white text-gray-700 hover:border-brand-500 hover:text-brand-600 dark:border-gray-700 dark:bg-white/[0.03] dark:text-gray-300"
+                          }`}
+                        >
+                          {survey.title || "Untitled survey"}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedSurveyId ? (
+                    <SurveyResponseForm
+                      survey={
+                        surveys.find((survey) => survey.id === selectedSurveyId) ??
+                        surveys[0]
+                      }
+                      onSubmitted={() => setHasSubmitted(true)}
+                    />
+                  ) : null}
+                </>
+              )}
             </div>
           )}
         </div>

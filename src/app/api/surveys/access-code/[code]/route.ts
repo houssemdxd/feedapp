@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Survey from "@/models/Survey";
+import User from "@/models/User";
 import { getCurrentUser } from "@/lib/session";
 
 function sanitizeSurveyForRespondent(survey: any) {
@@ -8,8 +9,6 @@ function sanitizeSurveyForRespondent(survey: any) {
     id: String(survey._id),
     title: survey.title,
     description: survey.description ?? "",
-    accessCode: survey.accessCode,
-    organizationId: String(survey.organizationId),
     questions: (survey.questions ?? []).map((question: any) => ({
       id: question.id,
       label: question.label,
@@ -37,19 +36,36 @@ export async function GET(
 
   if (!normalized) {
     return NextResponse.json(
-      { error: "Survey access code is required" },
+      { error: "Organization access code is required" },
       { status: 400 }
     );
   }
 
-  const survey = await Survey.findOne({ accessCode: normalized }).lean();
-  if (!survey) {
+  const organization = await User.findOne({
+    generatedCode: normalized,
+    role: "organization",
+  })
+    .select("_id fname lname email generatedCode")
+    .lean();
+
+  if (!organization) {
     return NextResponse.json(
-      { error: "No survey matches this access code" },
+      { error: "No organization matches this access code" },
       { status: 404 }
     );
   }
 
-  return NextResponse.json({ survey: sanitizeSurveyForRespondent(survey) });
+  const surveys = await Survey.find({ organizationId: organization._id })
+    .sort({ updatedAt: -1 })
+    .lean();
+
+  return NextResponse.json({
+    organization: {
+      id: String(organization._id),
+      name: `${organization.fname ?? ""} ${organization.lname ?? ""}`.trim() || organization.email,
+      code: organization.generatedCode ?? normalized,
+    },
+    surveys: surveys.map(sanitizeSurveyForRespondent),
+  });
 }
 

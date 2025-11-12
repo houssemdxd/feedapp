@@ -29,6 +29,14 @@ export default function SondageCanvas({ components, setComponents }: any) {
     setComponents((prev: any[]) => prev.filter((c: any) => c.id !== componentId));
   };
 
+  const handleLabelChange = (componentId: string, value: string) => {
+    setComponents((prev: any[]) =>
+      prev.map((component: any) =>
+        component.id === componentId ? { ...component, label: value } : component
+      )
+    );
+  };
+
   return (
     <div className="w-full bg-transparent">
       <h2 className="text-lg font-semibold mb-3 dark:text-white">Surveys Canvas</h2>
@@ -51,9 +59,21 @@ export default function SondageCanvas({ components, setComponents }: any) {
               ×
             </button>
 
-            <div className="font-medium mb-2 dark:text-white/90">
-              {c.label}
-            </div>
+            {["text", "radio", "checkbox", "rating"].includes(c.type) ? (
+              <div className="mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Question
+                </label>
+                <input
+                  value={c.label ?? ""}
+                  onChange={(event) => handleLabelChange(c.id, event.target.value)}
+                  placeholder="Enter your question"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-white/[0.05] dark:text-white"
+                />
+              </div>
+            ) : (
+              <div className="font-medium mb-2 dark:text-white/90">{c.label}</div>
+            )}
 
             {c.type === "input" && (
               <input className="border p-2 w-full mt-2 dark:bg-white dark:border-gray-300 dark:text-gray-900" placeholder="Answer here..." />

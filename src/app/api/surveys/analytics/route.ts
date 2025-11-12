@@ -53,55 +53,93 @@ function buildQuestionStats(survey: any): QuestionStat[] {
     const totalAnswers = answers.length;
 
     if (question.type === "radio" || question.type === "checkbox") {
-      const optionCounts = (question.options ?? []).map((option: string) => ({
-        option,
-        count: 0,
-      }));
-
-      answers.forEach((answer: any) => {
-        if (question.type === "radio") {
-          const selected = String(answer.value ?? "");
-          const option = optionCounts.find((entry) => entry.option === selected);
-          if (option) option.count += 1;
-        } else if (Array.isArray(answer.value)) {
-          answer.value.forEach((value: any) => {
-            const selected = String(value ?? "");
-            const option = optionCounts.find((entry) => entry.option === selected);
-            if (option) option.count += 1;
-          });
+      const counts = new Map<string, { option: string; count: number }>();
+      const registerOption = (label: string, increment = 0) => {
+        const normalized = label.trim().toLowerCase();
+        if (!normalized) {
+          return null;
         }
+        const existing = counts.get(normalized);
+        if (existing) {
+          existing.count += increment;
+          return normalized;
+        }
+        counts.set(normalized, { option: label.trim(), count: increment });
+        return normalized;
+      };
+
+      (question.options ?? []).forEach((option: string) => {
+        registerOption(option); // ensure option exists even if never chosen
       });
+
+      const recordValue = (raw: unknown) => {
+        if (raw === null || raw === undefined) return;
+        if (Array.isArray(raw)) {
+          raw.forEach(recordValue);
+          return;
+        }
+        const value = String(raw).trim();
+        if (!value) return;
+
+        const normalized = value.toLowerCase();
+        const canonical =
+          (question.options ?? []).find(
+            (opt: string) => opt.trim().toLowerCase() === normalized
+          ) ?? value;
+
+        const key = registerOption(canonical);
+        if (!key) return;
+
+        const entry = counts.get(key);
+        if (entry) {
+          entry.count += 1;
+        }
+      };
+
+      answers.forEach((answer: any) => recordValue(answer.value));
 
       return {
         id: question.id,
         label: question.label,
         type: question.type,
         totalAnswers,
-        optionCounts,
+        optionCounts: Array.from(counts.values()),
       };
     }
 
     if (question.type === "rating") {
-      const max = question.max ?? 5;
-      const distribution = Array.from({ length: max }, (_, index) => ({
-        value: index + 1,
-        count: 0,
-      }));
+      const maxProvided = Number(question.max);
+      const max = Number.isFinite(maxProvided) && maxProvided >= 1 ? maxProvided : 5;
+
+      const counts = new Map<number, number>();
 
       answers.forEach((answer: any) => {
-        const rating = Number(answer.value);
-        if (Number.isFinite(rating) && rating >= 1 && rating <= max) {
-          const entry = distribution.find((item) => item.value === rating);
-          if (entry) entry.count += 1;
-        }
+        const numeric =
+          typeof answer.value === "number"
+            ? answer.value
+            : Number(String(answer.value ?? "").trim());
+        if (!Number.isFinite(numeric)) return;
+
+        const rating = Math.round(numeric);
+        if (rating < 1 || rating > max) return;
+
+        counts.set(rating, (counts.get(rating) ?? 0) + 1);
       });
 
-      const totalWeighted = distribution.reduce(
-        (sum, entry) => sum + entry.value * entry.count,
-        0
-      );
+      const distribution = Array.from({ length: max }, (_, index) => {
+        const value = index + 1;
+        return {
+          value,
+          count: counts.get(value) ?? 0,
+        };
+      });
+
       const responseCount = distribution.reduce(
         (sum, entry) => sum + entry.count,
+        0
+      );
+      const totalWeighted = distribution.reduce(
+        (sum, entry) => sum + entry.value * entry.count,
         0
       );
 
@@ -112,7 +150,7 @@ function buildQuestionStats(survey: any): QuestionStat[] {
         totalAnswers,
         ratingDistribution: distribution,
         averageRating:
-          responseCount > 0 ? Number((totalWeighted / responseCount).toFixed(2)) : 0,
+          responseCount > 0 ? Number((totalWeighted / responseCount).toFixed(2)) : undefined,
       };
     }
 
@@ -170,8 +208,6 @@ export async function GET() {
       responses: responses.length,
       completionRate,
       lastUpdated,
-      accessCode: survey.accessCode,
-      distributionChannel: survey.distributionChannel ?? "In-app",
       questionStats: buildQuestionStats(survey),
     };
   });

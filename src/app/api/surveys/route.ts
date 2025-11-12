@@ -78,40 +78,16 @@ function normalizeQuestions(rawQuestions: RawQuestion[]) {
   return questions;
 }
 
-function generateAccessCode(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 6; i += 1) {
-    const index = Math.floor(Math.random() * alphabet.length);
-    code += alphabet[index];
-  }
-  return code;
-}
-
-async function createUniqueAccessCode() {
-  let attempts = 0;
-  while (attempts < 10) {
-    const candidate = generateAccessCode();
-    const exists = await Survey.exists({ accessCode: candidate });
-    if (!exists) {
-      return candidate;
-    }
-    attempts += 1;
-  }
-  throw new Error("Unable to generate a unique access code, please retry.");
-}
-
-function sanitizeSurvey(survey: any) {
+function sanitizeSurvey(survey: any, includeQuestions: boolean) {
   return {
     id: String(survey._id),
     title: survey.title,
     description: survey.description ?? "",
-    accessCode: survey.accessCode,
-    distributionChannel: survey.distributionChannel ?? "In-app",
-    questions: survey.questions ?? [],
     responseCount: survey.responses?.length ?? 0,
+    lastResponseAt: survey.responses?.slice(-1)[0]?.submittedAt ?? survey.updatedAt,
     createdAt: survey.createdAt,
     updatedAt: survey.updatedAt,
+    questions: includeQuestions ? survey.questions ?? [] : undefined,
   };
 }
 
@@ -135,7 +111,6 @@ export async function POST(req: NextRequest) {
     const title = String(body.title ?? "").trim();
     const description =
       typeof body.description === "string" ? body.description.trim() : "";
-    const distributionChannel = body.distributionChannel ?? "In-app";
 
     if (!title) {
       return NextResponse.json(
@@ -145,18 +120,14 @@ export async function POST(req: NextRequest) {
     }
 
     const questions = normalizeQuestions(body.questions ?? []);
-    const requestedCode =
-      typeof body.accessCode === "string" ? body.accessCode.trim().toUpperCase() : "";
 
-    const accessCode = requestedCode || (await createUniqueAccessCode());
-
-    if (requestedCode) {
-      const exists = await Survey.exists({ accessCode: requestedCode });
-      if (exists) {
-        return NextResponse.json(
-          { error: "This access code is already in use. Choose another one." },
-          { status: 409 }
-        );
+    // Ensure legacy accessCode index is removed now that surveys share org code
+    try {
+      // @ts-ignore - dropIndex exists at runtime
+      await Survey.collection.dropIndex("accessCode_1");
+    } catch (dropError: any) {
+      if (dropError?.codeName !== "IndexNotFound") {
+        console.warn("Failed to drop legacy accessCode index:", dropError);
       }
     }
 
@@ -164,13 +135,11 @@ export async function POST(req: NextRequest) {
       organizationId: currentUser._id,
       title,
       description,
-      distributionChannel,
-      accessCode,
       questions,
     });
 
     return NextResponse.json(
-      { survey: sanitizeSurvey(survey) },
+      { survey: sanitizeSurvey(survey, true) },
       { status: 201 }
     );
   } catch (error: any) {
@@ -205,18 +174,9 @@ export async function GET(req: NextRequest) {
     .sort({ updatedAt: -1 })
     .lean();
 
-  const sanitized = surveys.map((survey: any) => ({
-    id: String(survey._id),
-    title: survey.title,
-    description: survey.description ?? "",
-    accessCode: survey.accessCode,
-    distributionChannel: survey.distributionChannel ?? "In-app",
-    responseCount: survey.responses?.length ?? 0,
-    lastResponseAt: survey.responses?.slice(-1)[0]?.submittedAt ?? survey.updatedAt,
-    createdAt: survey.createdAt,
-    updatedAt: survey.updatedAt,
-    questions: includeQuestions ? survey.questions ?? [] : undefined,
-  }));
+  const sanitized = surveys.map((survey: any) =>
+    sanitizeSurvey(survey, includeQuestions)
+  );
 
   return NextResponse.json({ surveys: sanitized });
 }

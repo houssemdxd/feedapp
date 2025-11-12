@@ -1,43 +1,31 @@
 export const predefinedSondageComponents = [
   {
-    name: "Yes/No Survey ",
+    name: "Yes / No Question",
     elements: [
       {
-        type: "text",
-        label: "Do you agree with this statement?",
-      },
-      {
         type: "radio",
-        label: "Yes/No",
+        label: "Enter your question",
         options: ["Yes", "No"],
       },
     ],
   },
   {
-    name: "Rating Survey ",
+    name: "Rating Scale",
     elements: [
       {
-        type: "text",
-        label: "How satisfied are you with our service?",
-      },
-      {
         type: "rating",
-        label: "Satisfaction",
+        label: "Enter your question",
         max: 5,
       },
     ],
   },
   {
-    name: "Multiple Choice Survey ",
+    name: "Multiple Choice",
     elements: [
       {
-        type: "text",
-        label: "Which features do you use the most?",
-      },
-      {
         type: "checkbox",
-        label: "Features",
-        options: ["Speed", "Design", "Support", "Price"],
+        label: "Enter your question",
+        options: ["Option 1", "Option 2", "Option 3", "Option 4"],
       },
     ],
   },

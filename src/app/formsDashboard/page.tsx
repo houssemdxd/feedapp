@@ -37,8 +37,6 @@ type EngagementAsset = {
   responses: number;
   completionRate: number;
   lastUpdated: string;
-  accessCode?: string;
-  distributionChannel?: string;
   questionStats?: QuestionStat[];
 };
 
@@ -57,6 +55,8 @@ export default function FormsDashboardPage() {
   const [statisticsCleared, setStatisticsCleared] = useState(false);
   const [selectedSurveyId, setSelectedSurveyId] = useState<string | null>(null);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
@@ -187,6 +187,49 @@ export default function FormsDashboardPage() {
     setShowStatistics(false);
   };
 
+  const handleDeleteAsset = useCallback(
+    async (asset: EngagementAsset) => {
+      if (asset.type !== "Survey") {
+        setDeleteError("Deleting forms and posts will be available soon.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Delete survey "${asset.title}" and all of its responses? This cannot be undone.`
+      );
+      if (!confirmed) {
+        return;
+      }
+
+      setDeleteError(null);
+      setDeletingId(asset.id);
+      try {
+        const res = await fetch(`/api/surveys/${asset.id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Unable to delete this survey.");
+        }
+
+        if (selectedSurveyId === asset.id) {
+          setSelectedSurveyId(null);
+          setSelectedQuestionId(null);
+        }
+
+        await loadAnalytics();
+      } catch (deleteErr: any) {
+        console.error("Failed to delete survey:", deleteErr);
+        setDeleteError(
+          deleteErr instanceof Error
+            ? deleteErr.message
+            : "Something went wrong while deleting this survey."
+        );
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [loadAnalytics, selectedQuestionId, selectedSurveyId]
+  );
+
   const selectedSurvey = useMemo(
     () => assets.find((asset) => asset.id === selectedSurveyId) ?? null,
     [assets, selectedSurveyId]
@@ -277,6 +320,28 @@ export default function FormsDashboardPage() {
         },
       ];
 
+      const totalResponsesForRating = selectedQuestion.ratingDistribution.reduce(
+        (sum, entry) => sum + entry.count,
+        0
+      );
+      const distributionSummary = selectedQuestion.ratingDistribution
+        .filter((entry) => entry.count > 0)
+        .map((entry) => `${entry.value}: ${entry.count}`);
+
+      const summaryParts: string[] = [];
+      if (
+        typeof selectedQuestion.averageRating === "number" &&
+        !Number.isNaN(selectedQuestion.averageRating) &&
+        totalResponsesForRating > 0
+      ) {
+        summaryParts.push(
+          `Average rating: ${selectedQuestion.averageRating.toFixed(2)}`
+        );
+      }
+      if (distributionSummary.length > 0) {
+        summaryParts.push(`Counts ${distributionSummary.join(" • ")}`);
+      }
+
       const options: ApexOptions = {
         chart: { type: "bar", fontFamily: "Outfit, sans-serif" },
         plotOptions: { bar: { horizontal: false, columnWidth: "45%" } },
@@ -287,9 +352,11 @@ export default function FormsDashboardPage() {
       };
 
       const summary =
-        selectedQuestion.averageRating !== undefined
-          ? `Average rating: ${selectedQuestion.averageRating}`
-          : null;
+        summaryParts.length > 0
+          ? summaryParts.join(" • ")
+          : totalResponsesForRating > 0
+          ? `Collected ${totalResponsesForRating} responses.`
+          : "No responses recorded yet.";
 
       return { series, options, summary, chartType: "bar" as const };
     }
@@ -329,6 +396,12 @@ export default function FormsDashboardPage() {
           Delete statistics
         </Button>
       </div>
+
+      {deleteError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+          {deleteError}
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 pb-3 pt-4 dark:border-gray-800 dark:bg-white/[0.03] sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-4">
@@ -390,12 +463,6 @@ export default function FormsDashboardPage() {
                     isHeader
                     className="py-3 text-start text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
                   >
-                    Access code
-                  </TableCell>
-                  <TableCell
-                    isHeader
-                    className="py-3 text-start text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
-                  >
                     Responses
                   </TableCell>
                   <TableCell
@@ -408,13 +475,13 @@ export default function FormsDashboardPage() {
                     isHeader
                     className="py-3 text-start text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
                   >
-                    Channel
+                    Last update
                   </TableCell>
                   <TableCell
                     isHeader
                     className="py-3 text-start text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
                   >
-                    Last update
+                    Actions
                   </TableCell>
                 </TableRow>
               </TableHeader>
@@ -444,19 +511,31 @@ export default function FormsDashboardPage() {
                       </span>
                     </TableCell>
                     <TableCell className="py-4 text-sm font-semibold text-gray-800 dark:text-white/90">
-                      {asset.accessCode ?? "—"}
-                    </TableCell>
-                    <TableCell className="py-4 text-sm font-semibold text-gray-800 dark:text-white/90">
                       {asset.responses.toLocaleString("fr-FR")}
                     </TableCell>
                     <TableCell className="py-4 text-sm text-gray-700 dark:text-gray-300">
                       {asset.completionRate}%
                     </TableCell>
-                    <TableCell className="py-4 text-sm text-gray-700 dark:text-gray-300">
-                      {asset.distributionChannel ?? "In-app"}
-                    </TableCell>
                     <TableCell className="py-4 text-sm text-gray-500 dark:text-gray-400">
                       {new Date(asset.lastUpdated).toLocaleString("en-US")}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteAsset(asset)}
+                        disabled={
+                          asset.type !== "Survey" || deletingId === asset.id || loading
+                        }
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10 disabled:dark:border-gray-700 disabled:dark:text-gray-500"
+                        title={
+                          asset.type === "Survey"
+                            ? "Delete survey"
+                            : "Deleting forms/posts will be available soon"
+                        }
+                      >
+                        <TrashBinIcon className="h-3.5 w-3.5" />
+                        {deletingId === asset.id ? "Deleting..." : "Delete"}
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -505,7 +584,7 @@ export default function FormsDashboardPage() {
                         {asset.title}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {asset.type} • {asset.distributionChannel ?? "In-app"}
+                        {asset.type}
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-brand-600 dark:text-brand-400">

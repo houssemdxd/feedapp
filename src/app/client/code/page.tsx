@@ -32,28 +32,32 @@ const CodePage: React.FC = () => {
   };
 
   // Validation statique : code correct = "1"
-const checkCodeOrQr = async (code: string) => {
-  try {
-    const res = await fetch("/api/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
+const checkCodeOrQr = async (rawCode: string) => {
+  const trimmed = rawCode.trim().toUpperCase();
+  if (!trimmed) {
+    setError("Please enter an access code.");
+    return;
+  }
 
+  try {
+    const res = await fetch(`/api/surveys/access-code/${trimmed}`);
     const data = await res.json();
 
-    if (res.ok && data.success) {
-      // ✅ Code valide, stocke les préférences dans le state global ou localStorage
-      localStorage.setItem("organizationPreferences", JSON.stringify(data.preferences));
-      
-      // Redirige vers la page de l'organisation
-      router.push("/organization");
-    } else {
-      setError(data.message || "Code invalide");
+    if (!res.ok) {
+      setError(data.error || "Invalid organization code.");
+      return;
     }
+
+    // Persist organization info so other screens can reuse it
+    if (data.organization) {
+      localStorage.setItem("organizationInfo", JSON.stringify(data.organization));
+    }
+    localStorage.setItem("organizationCode", trimmed);
+
+    router.push(`/client?code=${encodeURIComponent(trimmed)}`);
   } catch (err) {
     console.error(err);
-    setError("Erreur serveur");
+    setError("Server error. Please try again.");
   }
 };
 

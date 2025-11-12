@@ -17,7 +17,6 @@ export type SurveyDetails = {
   id: string;
   title: string;
   description?: string;
-  accessCode: string;
   questions: SurveyQuestion[];
 };
 
@@ -145,9 +144,9 @@ export default function SurveyResponseForm({
             {survey.description}
           </p>
         )}
-        <p className="mt-2 text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">
-          Access code: {survey.accessCode}
-        </p>
+        {survey.description && (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{survey.description}</p>
+        )}
       </div>
 
       {survey.questions.length === 0 ? (

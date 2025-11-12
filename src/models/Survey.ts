@@ -29,8 +29,6 @@ export interface ISurvey extends Document {
   organizationId: Types.ObjectId;
   title: string;
   description?: string;
-  accessCode: string;
-  distributionChannel?: "Email" | "Website" | "In-app" | "SMS" | "Social";
   questions: SurveyQuestion[];
   responses: SurveyResponse[];
   createdAt: Date;
@@ -75,12 +73,6 @@ const SurveySchema = new Schema<ISurvey>(
     organizationId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     title: { type: String, required: true },
     description: { type: String },
-    accessCode: { type: String, required: true, unique: true },
-    distributionChannel: {
-      type: String,
-      enum: ["Email", "Website", "In-app", "SMS", "Social"],
-      default: "In-app",
-    },
     questions: { type: [SurveyQuestionSchema], default: [] },
     responses: { type: [SurveyResponseSchema], default: [] },
   },
@@ -88,8 +80,10 @@ const SurveySchema = new Schema<ISurvey>(
 );
 
 SurveySchema.index({ organizationId: 1, createdAt: -1 });
-SurveySchema.index({ accessCode: 1 });
 
-export default mongoose.models.Survey ||
-  mongoose.model<ISurvey>("Survey", SurveySchema);
+if (mongoose.models.Survey) {
+  delete mongoose.models.Survey;
+}
+
+export default mongoose.model<ISurvey>("Survey", SurveySchema);
 
