@@ -18,7 +18,7 @@ const ORG_ONLY = [
   /^\/settings(\/.*)?$/,
   /^\/organization(\/.*)?$/,
 ];
-const GUEST_ONLY = [/^\/signin$/, /^\/signup$/, /^\/forgot-password$/];
+const GUEST_ONLY = [/^\/signin$/, /^\/signup$/, /^\/forgot-password$/ , /^\/reset-password$/];
 const PUBLIC = [/^\/$/, /^\/pricing$/, /^\/about$/];
 
 function matchAny(pathname: string, patterns: RegExp[]) {

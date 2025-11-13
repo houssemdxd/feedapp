@@ -30,21 +30,14 @@ async function getMe(): Promise<User | null> {
 
 
 export default function SignInForm() {
-  const [note, setNote] = useState<string | null>(null);
-
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const router = useRouter();
   const sp = useSearchParams();
-  const signupOk = sp.get("signup") === "success";
-
-  useEffect(() => {
-    if (signupOk) setNote("Account created. Please sign in.");
-  }, [signupOk]);
 
   useEffect(() => {
     (async () => {
@@ -64,7 +57,7 @@ export default function SignInForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (loading) return; // guard
-    setError("");
+    setError(null);
     setLoading(true);
 
     try {
@@ -75,21 +68,21 @@ export default function SignInForm() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Login failed");
+      if (res.status === 403) {
+        setError("email_not_verified");
+        return;
+      }
+      else if (!res.ok) {
+        setError(data.message || "login_failed");
         setLoading(false);
         return;
       }
       const user = await getMe();
       if (!user) {
-        setError("Could not load session. Try again.");
+        setError("session_error");
         return;
       }
-      if (!user.emailVerified) {
-        setError("Email not verified, please check your email!");
-        return;
-      }
-
+      
       // honor ?next=… if present, otherwise role home
       const next = sp.get("next");
       if (next) {
@@ -106,13 +99,11 @@ export default function SignInForm() {
       }
 
     } catch {
-      setError("Something went wrong. Try again later.");
+      setError("network_error");
     } finally {
       const user = await getMe();
       console.log("finally role!!!!!!!!!!!" + user?.role);
-
       setLoading(false);
-
     }
   }
 
@@ -130,7 +121,7 @@ export default function SignInForm() {
       </div>
 
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
-          <LoginAlerts />  
+        <LoginAlerts error={error} onDismiss={() => setError(null)} />
         <div className="mb-5 sm:mb-8">
           <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
             Sign In
@@ -176,8 +167,6 @@ export default function SignInForm() {
               </div>
             </div>
 
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Checkbox checked={isChecked} onChange={setIsChecked} />
@@ -194,9 +183,6 @@ export default function SignInForm() {
             </div>
 
             <div>
-              {/* <Button className="w-full" size="sm" type="submit">
-                Sign in
-              </Button> */}
               <Button className="w-full" size="sm" type="submit" disabled={loading} aria-busy={loading || undefined}>
                 <span className="flex items-center justify-center gap-2">
                   {loading && <Spinner />}
@@ -211,7 +197,7 @@ export default function SignInForm() {
 
         <div className="mt-5">
           <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link
               href="/signup"
               className="text-brand-500 hover:text-brand-600 dark:text-brand-400"
@@ -220,11 +206,7 @@ export default function SignInForm() {
             </Link>
           </p>
         </div>
-
-
       </div>
-    
     </div>
   );
 }
-
