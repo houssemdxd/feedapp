@@ -74,31 +74,97 @@ Réponds UNIQUEMENT avec le JSON, sans texte supplémentaire avant ou après.`;
     let text = "";
     let lastError: any = null;
     
+    // Fonction pour attendre avec backoff exponentiel
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
     // Essayer chaque modèle jusqu'à ce qu'un fonctionne
     for (const modelName of modelsToTry) {
-      try {
-        console.log(`Tentative avec le modèle: ${modelName}`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-        console.log(`✅ Modèle ${modelName} fonctionne!`);
-        break; // Succès, sortir de la boucle
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`❌ Modèle ${modelName} a échoué:`, err.message);
-        // Si c'est une erreur 404 (modèle non trouvé), essayer le suivant
-        if (err?.message?.includes("404") || err?.message?.includes("not found") || err?.message?.includes("is not found")) {
-          continue;
+      let retries = 3; // Nombre de tentatives pour chaque modèle
+      let attempt = 0;
+
+      while (retries > 0) {
+        try {
+          attempt++;
+          console.log(`[Gemini AI] Tentative ${attempt}/3 avec le modèle: ${modelName}`);
+          const model = genAI.getGenerativeModel({ model: modelName });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+          console.log(`✅ [Gemini AI] Modèle ${modelName} fonctionne!`);
+          break; // Succès, sortir de toutes les boucles
+        } catch (err: any) {
+          lastError = err;
+          const errorMsg = err?.message || String(err);
+          console.warn(`❌ [Gemini AI] Modèle ${modelName} a échoué (tentative ${attempt}/3):`, errorMsg);
+          
+          // Si erreur 404 ou "not found" (modèle non disponible), essayer le modèle suivant
+          if (
+            errorMsg.includes("404") ||
+            errorMsg.includes("not found") ||
+            errorMsg.includes("is not found") ||
+            errorMsg.includes("not available") ||
+            errorMsg.includes("not supported")
+          ) {
+            console.log(`   → Modèle ${modelName} non disponible, passage au suivant...`);
+            break; // Sortir de la boucle de retry pour ce modèle
+          }
+          
+          // Si erreur 503 (Service Unavailable) ou rate limit, retry avec backoff
+          if (
+            errorMsg.includes("503") ||
+            errorMsg.includes("Service Unavailable") ||
+            errorMsg.includes("overloaded") ||
+            errorMsg.includes("rate limit") ||
+            errorMsg.includes("429")
+          ) {
+            retries--;
+            if (retries > 0) {
+              const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Backoff exponentiel, max 5s
+              console.log(`   → Service surchargé, nouvelle tentative dans ${waitTime}ms...`);
+              await wait(waitTime);
+              continue; // Réessayer avec le même modèle
+            } else {
+              console.log(`   → Trop de tentatives pour ${modelName}, passage au modèle suivant...`);
+              break; // Passer au modèle suivant
+            }
+          }
+          
+          // Pour les autres erreurs (auth, etc.), relancer immédiatement
+          throw err;
         }
-        // Pour les autres erreurs, relancer
-        throw err;
       }
+
+      // Si on a réussi, sortir de la boucle principale
+      if (text) break;
     }
     
     // Si aucun modèle n'a fonctionné
     if (!text && lastError) {
-      throw new Error(`Aucun modèle Gemini disponible. Dernière erreur: ${lastError.message}`);
+      const errorMsg = lastError?.message || String(lastError);
+      
+      // Message spécifique pour service surchargé
+      if (
+        errorMsg.includes("503") ||
+        errorMsg.includes("Service Unavailable") ||
+        errorMsg.includes("overloaded")
+      ) {
+        return NextResponse.json({
+          summary: "Le service d'analyse IA est temporairement surchargé. Veuillez réessayer dans quelques instants.",
+          insights: [
+            "Les modèles Gemini sont actuellement surchargés.",
+            "Veuillez patienter quelques minutes et réessayer.",
+            "Les statistiques sont toujours disponibles ci-dessous.",
+          ],
+          recommendations: [
+            "Réessayez l'analyse dans quelques minutes.",
+            "Les données statistiques restent accessibles sans l'analyse IA.",
+          ],
+          highlights: {},
+          error: "Service temporarily unavailable",
+        });
+      }
+      
+      throw new Error(`Aucun modèle Gemini disponible. Dernière erreur: ${errorMsg}`);
     }
 
     // Extraire le JSON de la réponse

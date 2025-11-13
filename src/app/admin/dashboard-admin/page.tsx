@@ -623,21 +623,52 @@ export default function FormsPostsTable() {
       // Toujours stocker l'analyse même en cas d'erreur (elle contient un message d'erreur formaté)
       setAiInsights((prev) => ({ ...prev, [formId]: analysis }));
       
-      if (!res.ok && analysis.error) {
-        console.error("AI analysis error:", analysis.error);
+      // Afficher un message d'erreur seulement si c'est une erreur critique
+      if (!res.ok) {
+        if (analysis.error === "Service temporarily unavailable") {
+          // Message déjà formaté dans la réponse, pas besoin d'alerte
+          console.warn("Service IA temporairement indisponible");
+        } else if (analysis.error) {
+          console.error("AI analysis error:", analysis.error);
+        }
       }
     } catch (err: any) {
       console.error("AI analysis error:", err);
-      // Stocker un message d'erreur formaté
-      setAiInsights((prev) => ({
-        ...prev,
-        [formId]: {
-          summary: "Erreur lors de l'analyse: " + (err?.message || "Erreur inconnue"),
-          insights: [],
-          recommendations: [],
-          highlights: {}
-        }
-      }));
+      const errorMsg = err?.message || "Erreur inconnue";
+      
+      // Message spécifique pour service surchargé
+      if (
+        errorMsg.includes("503") ||
+        errorMsg.includes("Service Unavailable") ||
+        errorMsg.includes("overloaded")
+      ) {
+        setAiInsights((prev) => ({
+          ...prev,
+          [formId]: {
+            summary: "Le service d'analyse IA est temporairement surchargé. Veuillez réessayer dans quelques instants.",
+            insights: [
+              "Les modèles Gemini sont actuellement surchargés.",
+              "Veuillez patienter quelques minutes et réessayer.",
+              "Les statistiques sont toujours disponibles ci-dessous.",
+            ],
+            recommendations: [
+              "Réessayez l'analyse dans quelques minutes.",
+              "Les données statistiques restent accessibles sans l'analyse IA.",
+            ],
+            highlights: {},
+          },
+        }));
+      } else {
+        setAiInsights((prev) => ({
+          ...prev,
+          [formId]: {
+            summary: "Erreur lors de l'analyse: " + errorMsg,
+            insights: [],
+            recommendations: [],
+            highlights: {},
+          },
+        }));
+      }
     } finally {
       setLoadingAI(null);
     }
