@@ -19,7 +19,7 @@ export async function GET() {
 
   await connectDB();
   const user = await User.findById(payload.userId)
-    .select("_id email fname lname role bio image country postalCode city userName phone")
+    .select("_id email fname lname role bio image country postalCode city userName phone emailVerified")
     .lean();
   console.log("user :", user);
 
@@ -41,6 +41,7 @@ export async function GET() {
     city: user.city ?? "none",
     image: user.image ?? "/images/user/user-05.jpg",
     userName: user.userName ?? "none",
+    emailVerified: user.emailVerified,
     },
   });
 }

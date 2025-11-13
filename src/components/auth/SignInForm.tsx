@@ -16,7 +16,7 @@ import Spinner from "../ui/spinner/Spinner";
 type Role = "client" | "organization";
 type User = { _id: string; email: string; role: Role } & Partial<{
   fname: string; lname: string; bio: string; image: string; country: string;
-  postalCode: string; city: string; userName: string; phone: string;
+  postalCode: string; city: string; userName: string; phone: string; emailVerified: Date;
 }>;
 
 type MeResponse = { user: User | null };
@@ -47,15 +47,15 @@ export default function SignInForm() {
   }, [signupOk]);
 
   useEffect(() => {
-  (async () => {
-    const user = await getMe();
-    if (!user) return;
-    const next = sp.get("next");
-    if (next) { router.replace(next); return; }
-    router.replace(user.role === "organization" ? "/admin" : "/client");
-  })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+    (async () => {
+      const user = await getMe();
+      if (!user) return;
+      const next = sp.get("next");
+      if (next) { router.replace(next); return; }
+      router.replace(user.role === "organization" ? "/admin" : "/client");
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -85,7 +85,10 @@ export default function SignInForm() {
         setError("Could not load session. Try again.");
         return;
       }
-
+      if (!user.emailVerified) {
+        setError("Email not verified, please check your email!");
+        return;
+      }
 
       // honor ?next=… if present, otherwise role home
       const next = sp.get("next");
@@ -127,6 +130,7 @@ export default function SignInForm() {
       </div>
 
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
+          <LoginAlerts />  
         <div className="mb-5 sm:mb-8">
           <h1 className="mb-2 font-semibold text-gray-800 text-title-sm dark:text-white/90 sm:text-title-md">
             Sign In
@@ -219,13 +223,8 @@ export default function SignInForm() {
 
 
       </div>
-      {signupOk && (
-        <LoginAlerts />
-      )}
+    
     </div>
   );
 }
-// function setNote(arg0: string) {
-//   throw new Error("Function not implemented.");
-// }
 

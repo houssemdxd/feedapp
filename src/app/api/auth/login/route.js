@@ -76,9 +76,9 @@ export async function POST(req) {
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) return new Response(JSON.stringify({ error: "Invalid email or password" }), { status: 401 });
-
+  const isActivate = user.isActivate?? true;
   //const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  const token = signAccessToken({ userId: String(user._id), role: String(user.role), });
+  const token = signAccessToken({ userId: String(user._id), role: String(user.role),isActivate: String(isActivate) });
   await setSessionCookie(token);
 
   return new Response(JSON.stringify({ token }), { status: 200 });
